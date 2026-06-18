@@ -13,13 +13,8 @@ import type { ParcelComplexSummary } from './api/fetchParcelComplexes';
 import type { ParcelTrades, TradeItem } from './api/fetchParcelTrades';
 import type { TradeTrendPoint } from './api/fetchTradeTrend';
 import type { RegionComplexSummary } from '../region/api/fetchRegions';
-
-type DetailRequestState = 'idle' | 'loading' | 'ready' | 'error';
-
-type ComplexSelection = {
-  parcelId: number | null;
-  complexId: number | null;
-};
+import type { ComplexSelection, DetailRequestState } from '../../app/appTypes';
+import { detailRequestLabel, formatAddress } from '../../app/appUtils';
 
 type DetailSidebarProps = {
   complexDetail: ComplexDetail | null;
@@ -184,23 +179,6 @@ function detailDrawerKicker(selection: ComplexSelection): string {
   return selection.complexId == null
     ? `필지 ${selection.parcelId}`
     : `단지 ${selection.complexId} / 필지 ${selection.parcelId}`;
-}
-
-function detailRequestLabel(state: DetailRequestState): string {
-  switch (state) {
-    case 'idle':
-      return '대기';
-    case 'loading':
-      return '불러오는 중';
-    case 'ready':
-      return '완료';
-    case 'error':
-      return '오류';
-  }
-}
-
-function formatAddress(address: string | null): string {
-  return address ?? '주소 정보 없음';
 }
 
 function detailMetric(label: string, value: string | null) {

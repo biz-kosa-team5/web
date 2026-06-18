@@ -1,0 +1,171 @@
+.app-shell {
+  box-sizing: border-box;
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  background: var(--hs-surface-page);
+  color: var(--hs-text-primary);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell *,
+.app-shell *::before,
+.app-shell *::after {
+  box-sizing: border-box;
+}
+
+.app-bar {
+  position: relative;
+  z-index: var(--hs-z-appbar);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto) auto;
+  min-height: var(--hs-appbar-height);
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--hs-border-default);
+  background: var(--hs-surface-control);
+  box-shadow: var(--hs-shadow-appbar);
+}
+
+.app-brand {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.app-brand h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.app-brand span {
+  color: var(--hs-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.app-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--hs-color-muted-strong);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.app-status span {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  border: 1px solid var(--hs-border-default);
+  border-radius: 999px;
+  padding: 0 8px;
+  background: var(--hs-surface-control-muted);
+  font-weight: 700;
+}
+
+.app-status span:first-child {
+  border-color: rgba(49, 95, 131, 0.32);
+  background: var(--hs-color-region-soft);
+  color: var(--hs-color-region);
+}
+
+.exploration-toggle,
+.search-panel button,
+.region-panel > button,
+.filter-panel button,
+.panel-list button,
+.detail-drawer-close,
+.detail-complex-switcher button {
+  min-height: var(--hs-control-height);
+  border: 1px solid var(--hs-border-default);
+  border-radius: var(--hs-control-radius);
+  background: var(--hs-surface-control);
+  color: var(--hs-text-primary);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.exploration-toggle:hover,
+.search-panel button:hover,
+.region-panel > button:hover,
+.filter-panel button:hover,
+.panel-list button:hover,
+.detail-drawer-close:hover,
+.detail-complex-switcher button:hover,
+.map-controls button:hover,
+.marker-list-button:hover {
+  border-color: var(--hs-border-strong);
+  background: var(--hs-surface-control-muted);
+}
+
+.exploration-toggle:focus-visible,
+.search-panel button:focus-visible,
+.region-panel > button:focus-visible,
+.filter-panel button:focus-visible,
+.panel-list button:focus-visible,
+.detail-drawer-close:focus-visible,
+.detail-complex-switcher button:focus-visible,
+.map-controls button:focus-visible,
+.marker-list-button:focus-visible,
+.search-panel input:focus-visible,
+.filter-panel input:focus-visible,
+.kakao-map-overlay:focus-visible {
+  outline: 0;
+  box-shadow: var(--hs-focus-ring-strong);
+}
+
+.exploration-toggle {
+  padding: 0 14px;
+  border-color: var(--hs-action-primary);
+  background: var(--hs-action-primary);
+  color: var(--hs-color-surface);
+}
+
+.exploration-toggle:hover {
+  border-color: var(--hs-action-primary);
+  background: var(--hs-action-primary);
+}
+
+.map-workspace {
+  position: relative;
+  height: calc(100vh - var(--hs-appbar-height));
+  min-height: 0;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .app-shell {
+    min-height: 100dvh;
+  }
+
+  .map-workspace {
+    height: calc(100dvh - var(--hs-appbar-height));
+  }
+}
+
+.map-status,
+.map-feedback,
+.filter-panel,
+.marker-preview-list,
+.exploration-panel {
+  border: 1px solid var(--hs-border-default);
+  border-radius: var(--hs-panel-radius);
+  background: var(--hs-surface-panel);
+  box-shadow: var(--hs-shadow-panel);
+}
