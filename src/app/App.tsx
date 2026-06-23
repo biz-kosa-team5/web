@@ -2,6 +2,8 @@ import { useCallback, useState, type FormEvent } from 'react';
 
 import type { ComplexMarkerFilters } from '../features/map/api/fetchMapMarkers';
 import type { KakaoMapRuntimeState } from '../features/map/KakaoMapSurface';
+import { ChatbotPanel } from '../features/chatbot/ChatbotPanel';
+import { useChatbot } from '../features/chatbot/useChatbot';
 import { EMPTY_COMPLEX_MARKER_FILTERS } from './appConstants';
 import type {
   AppProps,
@@ -58,7 +60,9 @@ function MapApp({
     initialComplexSelectionFromUrl,
   );
   const [isExplorationOpen, setIsExplorationOpen] = useState(true);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [filterFormKey, setFilterFormKey] = useState(0);
+  const chatbot = useChatbot();
 
   const {
     focusMap,
@@ -169,6 +173,7 @@ function MapApp({
   return (
     <main
       className="app-shell"
+      data-chatbot-open={isChatbotOpen ? 'true' : 'false'}
       data-detail-open={selectedComplex == null ? 'false' : 'true'}
       data-ui-surface="map-first"
     >
@@ -253,6 +258,17 @@ function MapApp({
           sidebarMode={sidebarMode}
           tradeRows={tradeRows}
           tradeTrend={tradeTrend}
+        />
+
+        <ChatbotPanel
+          inputValue={chatbot.inputValue}
+          isOpen={isChatbotOpen}
+          messages={chatbot.messages}
+          requestState={chatbot.requestState}
+          onClose={() => setIsChatbotOpen(false)}
+          onInputChange={chatbot.setInputValue}
+          onOpen={() => setIsChatbotOpen(true)}
+          onSubmit={chatbot.submitQuestion}
         />
       </div>
     </main>
