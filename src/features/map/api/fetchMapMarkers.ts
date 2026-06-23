@@ -65,13 +65,9 @@ const EMPTY_COMPLEX_MARKER_FILTERS: Required<ComplexMarkerFilters> = {
 };
 
 export function regionLevelForMapLevel(level: number): RegionLevel {
-  if (level >= 10) {
-    return 'si-do';
-  }
-
   if (level >= 7) {
-    return 'si-gun-gu';
+    return 'district';
   }
 
-  return 'eup-myeon-dong';
+  return 'neighborhood';
 }

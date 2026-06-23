@@ -17,7 +17,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
       swLng: 126.85,
       neLat: 37.7,
       neLng: 127.2,
-      region: 'si-gun-gu',
+      region: 'district',
     };
 
     await fetchRegionMarkers(request);
@@ -63,7 +63,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-gun-gu',
+        region: 'district',
       }),
     ).resolves.toEqual([
       {
@@ -105,7 +105,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-gun-gu',
+        region: 'district',
       }),
     ).resolves.toEqual([
       {
@@ -127,7 +127,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'eup-myeon-dong',
+        region: 'neighborhood',
       }),
     ).resolves.toEqual([]);
   });
@@ -141,7 +141,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-gun-gu',
+        region: 'district',
       }),
     ).rejects.toThrow('Invalid public API region marker response: expected an array');
   });
@@ -167,7 +167,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-gun-gu',
+        region: 'district',
       }),
     ).rejects.toThrow('Invalid public API region marker response: lat must be a number');
   });
@@ -181,7 +181,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-do',
+        region: 'district',
       }),
     ).rejects.toThrow('Failed to fetch region markers: 500');
   });
@@ -207,7 +207,7 @@ describe('fetchRegionMarkers API 어댑터', () => {
         swLng: 126.85,
         neLat: 37.7,
         neLng: 127.2,
-        region: 'si-do',
+        region: 'district',
       }),
     ).rejects.toThrow('Failed to fetch region markers: 400 Unsupported region.');
   });

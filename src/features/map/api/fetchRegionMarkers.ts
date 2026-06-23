@@ -1,7 +1,7 @@
 import { resolveApiUrl } from './resolveApiUrl';
 import { readProblemDetail } from './readProblemDetail';
 
-export type RegionLevel = 'si-do' | 'si-gun-gu' | 'eup-myeon-dong';
+export type RegionLevel = 'district' | 'neighborhood';
 
 export type RegionMarkersRequest = {
   swLat: number;

@@ -28,7 +28,7 @@ describe('fetchMapMarkers API 어댑터', () => {
     );
   });
 
-  it('wide map level에서 si-do region marker를 사용한다', async () => {
+  it('wide map level에서 district region marker를 사용한다', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -37,18 +37,18 @@ describe('fetchMapMarkers API 어댑터', () => {
         bounds: boundsRequest(),
         level: 10,
       }),
-    ).resolves.toEqual({ kind: 'region', level: 'si-do', markers: [] });
+    ).resolves.toEqual({ kind: 'region', level: 'district', markers: [] });
 
     expect(fetchMock).toHaveBeenCalledWith(
       resolveApiUrl('/api/v1/map/regions'),
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('"region":"si-do"'),
+        body: expect.stringContaining('"region":"district"'),
       }),
     );
   });
 
-  it('middle-wide map level에서 si-gun-gu region marker를 사용한다', async () => {
+  it('middle-wide map level에서 district region marker를 사용한다', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -60,12 +60,12 @@ describe('fetchMapMarkers API 어댑터', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       resolveApiUrl('/api/v1/map/regions'),
       expect.objectContaining({
-        body: expect.stringContaining('"region":"si-gun-gu"'),
+        body: expect.stringContaining('"region":"district"'),
       }),
     );
   });
 
-  it('detailed complex level 전에는 eup-myeon-dong region marker를 사용한다', async () => {
+  it('detailed complex level 전에는 neighborhood region marker를 사용한다', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -77,7 +77,7 @@ describe('fetchMapMarkers API 어댑터', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       resolveApiUrl('/api/v1/map/regions'),
       expect.objectContaining({
-        body: expect.stringContaining('"region":"eup-myeon-dong"'),
+        body: expect.stringContaining('"region":"neighborhood"'),
       }),
     );
   });
