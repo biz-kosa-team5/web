@@ -1,15 +1,16 @@
 import { useRef, useState } from 'react';
 
 import { queryChatbot } from './api/queryChatbot';
-import type { ChatbotMessage, ChatbotRequestState } from './chatbotTypes';
+import type { ChatbotMessage, ChatbotRequestState, ChatbotUiAction } from './chatbotTypes';
 
 const IDLE_REQUEST_STATE: ChatbotRequestState = {
   status: 'idle',
   error: null,
 };
 
-export function useChatbot() {
+export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => void } = {}) {
   const messageSequenceRef = useRef(0);
+  const executedActionIdsRef = useRef(new Set<string>());
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ChatbotMessage[]>([]);
   const [requestState, setRequestState] = useState<ChatbotRequestState>(IDLE_REQUEST_STATE);
@@ -32,15 +33,18 @@ export function useChatbot() {
     ]);
 
     try {
-      const json = await queryChatbot(question);
+      const response = await queryChatbot(question);
+      const assistantMessageId = nextMessageId();
       setMessages((current) => [
         ...current,
         {
-          id: nextMessageId(),
+          id: assistantMessageId,
           role: 'assistant',
-          json,
+          content: response.answer,
+          response,
         },
       ]);
+      runAutoUiAction(assistantMessageId, response.uiActions);
       setRequestState(IDLE_REQUEST_STATE);
     } catch (error) {
       setRequestState({
@@ -61,5 +65,19 @@ export function useChatbot() {
   function nextMessageId(): string {
     messageSequenceRef.current += 1;
     return `chatbot-message-${messageSequenceRef.current}`;
+  }
+
+  function runAutoUiAction(messageId: string, actions: ChatbotUiAction[]) {
+    const action = actions.find((candidate) => candidate.autoRun);
+    if (action == null) {
+      return;
+    }
+
+    const executionKey = `${messageId}:${action.id}`;
+    if (executedActionIdsRef.current.has(executionKey)) {
+      return;
+    }
+    executedActionIdsRef.current.add(executionKey);
+    options.onUiAction?.(action);
   }
 }

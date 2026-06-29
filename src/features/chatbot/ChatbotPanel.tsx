@@ -1,8 +1,11 @@
 import type { FormEvent } from 'react';
 
+import { ChatbotActionRow } from './ChatbotActionRow';
+import { ChatbotArtifacts } from './ChatbotArtifacts';
 import type {
   ChatbotMessage,
   ChatbotRequestState,
+  ChatbotUiAction,
 } from './chatbotTypes';
 
 type ChatbotPanelProps = {
@@ -14,6 +17,7 @@ type ChatbotPanelProps = {
   onInputChange: (value: string) => void;
   onOpen: () => void;
   onSubmit: () => void;
+  onUiAction: (action: ChatbotUiAction) => void;
 };
 
 export function ChatbotPanel({
@@ -25,6 +29,7 @@ export function ChatbotPanel({
   onInputChange,
   onOpen,
   onSubmit,
+  onUiAction,
 }: ChatbotPanelProps) {
   if (!isOpen) {
     return (
@@ -65,11 +70,20 @@ export function ChatbotPanel({
             className="chatbot-message"
             data-chatbot-message-role={message.role}
           >
-            {message.role === 'user' ? (
-              <p>{message.content}</p>
-            ) : (
-              <pre>{JSON.stringify(message.json, null, 2)}</pre>
-            )}
+            <p className="chatbot-message-bubble">{message.content}</p>
+            {message.role === 'assistant' ? (
+              <>
+                <ChatbotArtifacts
+                  actions={message.response.uiActions}
+                  artifacts={message.response.uiArtifacts}
+                  onUiAction={onUiAction}
+                />
+                <ChatbotActionRow
+                  actions={message.response.uiActions}
+                  onUiAction={onUiAction}
+                />
+              </>
+            ) : null}
           </article>
         ))}
 
