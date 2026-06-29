@@ -3,8 +3,9 @@ import { useCallback, useState, type FormEvent } from 'react';
 import type { ComplexMarkerFilters } from '../features/map/api/fetchMapMarkers';
 import type { KakaoMapRuntimeState } from '../features/map/KakaoMapSurface';
 import { ChatbotPanel } from '../features/chatbot/ChatbotPanel';
+import type { ChatbotUiAction } from '../features/chatbot/chatbotTypes';
 import { useChatbot } from '../features/chatbot/useChatbot';
-import { EMPTY_COMPLEX_MARKER_FILTERS } from './appConstants';
+import { EMPTY_COMPLEX_MARKER_FILTERS, SEARCH_FOCUS_DELTA } from './appConstants';
 import type {
   AppProps,
   ComplexMapMarker,
@@ -62,7 +63,6 @@ function MapApp({
   const [isExplorationOpen, setIsExplorationOpen] = useState(true);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [filterFormKey, setFilterFormKey] = useState(0);
-  const chatbot = useChatbot();
 
   const {
     focusMap,
@@ -72,6 +72,25 @@ function MapApp({
     mapFocusTarget,
     viewport,
   } = useMapViewport(initialMapLevel);
+  const handleChatbotUiAction = useCallback((action: ChatbotUiAction) => {
+    if (action.type !== 'focus_map') {
+      return;
+    }
+
+    const { target } = action;
+    focusMap(target.latitude, target.longitude, target.level, SEARCH_FOCUS_DELTA);
+    if (
+      target.kind === 'complex'
+      && target.openDetail
+      && (target.complexId != null || target.parcelId != null)
+    ) {
+      setSelectedComplex({
+        parcelId: target.parcelId,
+        complexId: target.complexId,
+      });
+    }
+  }, [focusMap]);
+  const chatbot = useChatbot({ onUiAction: handleChatbotUiAction });
   const {
     handleRetryMarkers,
     markerError,
@@ -269,6 +288,7 @@ function MapApp({
           onInputChange={chatbot.setInputValue}
           onOpen={() => setIsChatbotOpen(true)}
           onSubmit={chatbot.submitQuestion}
+          onUiAction={handleChatbotUiAction}
         />
       </div>
     </main>
