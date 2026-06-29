@@ -131,7 +131,7 @@ describe('App public map surface', () => {
 
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/complex/1002'))).toBe(true);
     expect(rootElement.textContent).toContain('지도에 표시했습니다.');
-    expect(rootElement.textContent).toContain('지도에서 다시 보기');
+    expect(rootElement.textContent).toContain('잠실엘스 지도 보기');
     expect(rootElement.textContent).not.toContain('37.5124');
     expect(rootElement.textContent).not.toContain('longitude');
 
@@ -183,7 +183,7 @@ describe('App public map surface', () => {
     const callsAfterAutoRun = fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/v1/map/complexes')).length;
 
     await act(async () => {
-      getButton(rootElement, '지도에서 다시 보기').click();
+      getButton(rootElement, '잠실엘스 지도 보기').click();
       await Promise.resolve();
     });
     await flushAsyncState();
