@@ -10,6 +10,7 @@ import { ChatbotActionRow } from './ChatbotActionRow';
 import { ChatbotArtifacts } from './ChatbotArtifacts';
 import type {
   ChatbotMessage,
+  ChatbotProgressStep,
   ChatbotRequestState,
   ChatbotUiArtifact,
   ChatbotUiAction,
@@ -190,7 +191,7 @@ export function ChatbotPanel({
       <header className="chatbot-panel-header">
         <div>
           <h2>AI 집찾기</h2>
-          {isLoading ? <p>응답 생성 중</p> : null}
+          {isLoading ? <p>{requestState.phaseLabel}</p> : null}
         </div>
         <button type="button" aria-label="AI 집찾기 닫기" onClick={onClose}>
           닫기
@@ -204,8 +205,12 @@ export function ChatbotPanel({
             className="chatbot-message"
             data-chatbot-message-role={message.role}
           >
-            <p className="chatbot-message-bubble">{message.content}</p>
-            {message.role === 'assistant' ? (
+            <p className="chatbot-message-bubble">
+              {message.role === 'assistant' && message.content.length === 0
+                ? '답변을 준비하고 있습니다.'
+                : message.content}
+            </p>
+            {message.role === 'assistant' && message.response != null ? (
               <>
                 <ChatbotArtifacts
                   actions={message.response.uiActions}
@@ -223,11 +228,7 @@ export function ChatbotPanel({
           </article>
         ))}
 
-        {isLoading ? (
-          <p className="chatbot-loading" role="status">
-            응답 생성 중
-          </p>
-        ) : null}
+        {isLoading ? <ChatbotProgress steps={requestState.steps} /> : null}
         <div ref={messageListEndRef} aria-hidden="true" />
       </div>
 
@@ -272,6 +273,28 @@ function clampChatbotPanelSize(size: ChatbotPanelSize): ChatbotPanelSize {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function ChatbotProgress({ steps }: { steps: ChatbotProgressStep[] }) {
+  const visibleSteps = steps.length > 0
+    ? steps
+    : [{ label: '질문 분석 중', step: 1, total: 5 }];
+
+  return (
+    <div className="chatbot-progress" role="status" aria-label="AI 집찾기 응답 진행 상태">
+      <ol>
+        {visibleSteps.map((step) => (
+          <li
+            key={step.step}
+            data-chatbot-progress-current={step.step === visibleSteps.at(-1)?.step ? 'true' : 'false'}
+          >
+            <span>{step.step}</span>
+            <strong>{step.label}</strong>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
 function hasLinkedArtifactActions(artifacts: ChatbotUiArtifact[]): boolean {
