@@ -10,7 +10,6 @@ import { ChatbotActionRow } from './ChatbotActionRow';
 import { ChatbotArtifacts } from './ChatbotArtifacts';
 import type {
   ChatbotMessage,
-  ChatbotProgressStep,
   ChatbotRequestState,
   ChatbotUiArtifact,
   ChatbotUiAction,
@@ -228,7 +227,7 @@ export function ChatbotPanel({
           </article>
         ))}
 
-        {isLoading ? <ChatbotProgress steps={requestState.steps} /> : null}
+        {isLoading ? <ChatbotProgress label={requestState.phaseLabel} /> : null}
         <div ref={messageListEndRef} aria-hidden="true" />
       </div>
 
@@ -275,24 +274,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function ChatbotProgress({ steps }: { steps: ChatbotProgressStep[] }) {
-  const visibleSteps = steps.length > 0
-    ? steps
-    : [{ label: '질문 분석 중', step: 1, total: 5 }];
-
+function ChatbotProgress({ label }: { label: string }) {
   return (
     <div className="chatbot-progress" role="status" aria-label="AI 집찾기 응답 진행 상태">
-      <ol>
-        {visibleSteps.map((step) => (
-          <li
-            key={step.step}
-            data-chatbot-progress-current={step.step === visibleSteps.at(-1)?.step ? 'true' : 'false'}
-          >
-            <span>{step.step}</span>
-            <strong>{step.label}</strong>
-          </li>
-        ))}
-      </ol>
+      <span aria-hidden="true" />
+      <strong>{label}</strong>
     </div>
   );
 }

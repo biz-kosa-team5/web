@@ -102,7 +102,7 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
               return {
                 status: 'loading',
                 error: null,
-                phaseLabel: status.label,
+                phaseLabel: formatChatbotProgressLabel(status.label),
                 steps: appendProgressStep(current.steps, status),
               };
             });
@@ -221,6 +221,10 @@ function appendProgressStep(
     return [...steps, nextStep];
   }
   return steps.map((step, index) => (index === existingIndex ? nextStep : step));
+}
+
+function formatChatbotProgressLabel(label: string): string {
+  return label.replace(/^작업\s+\d+\/\d+\s+처리 중$/, '작업 처리 중');
 }
 
 function isAbortError(error: unknown, signal: AbortSignal): boolean {
