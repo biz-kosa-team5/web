@@ -1,6 +1,8 @@
 import { readProblemDetail } from '../../map/api/readProblemDetail';
 import { resolveApiUrl } from '../../map/api/resolveApiUrl';
+import { normalizeChatbotConversationMemoryPatch } from '../chatbotMemory';
 import type {
+  ChatbotConversationContext,
   ChatbotResponse,
   ChatbotUiAction,
   ChatbotUiArtifact,
@@ -14,13 +16,19 @@ import type {
 
 const CHATBOT_QUERY_PATH = '/api/v1/chatbot/query';
 
-export async function queryChatbot(question: string): Promise<ChatbotResponse> {
+export async function queryChatbot(
+  question: string,
+  conversationContext?: ChatbotConversationContext | null,
+): Promise<ChatbotResponse> {
   const response = await fetch(resolveApiUrl(CHATBOT_QUERY_PATH), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      ...(conversationContext == null ? {} : { conversationContext }),
+    }),
   });
 
   if (!response.ok) {
@@ -48,12 +56,20 @@ function isChatbotResponse(value: unknown): value is ChatbotResponse {
 }
 
 function normalizeChatbotResponse(payload: ChatbotResponse): ChatbotResponse {
-  return {
+  const normalized: ChatbotResponse = {
     ...payload,
     uiActions: normalizeUiActions(payload.uiActions),
     uiArtifacts: normalizeUiArtifacts(payload.uiArtifacts),
     uiSummary: normalizeUiSummary(payload.uiSummary),
   };
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'conversationMemoryPatch')) {
+    normalized.conversationMemoryPatch = normalizeChatbotConversationMemoryPatch(
+      payload.conversationMemoryPatch,
+    );
+  }
+
+  return normalized;
 }
 
 function normalizeUiActions(value: unknown): ChatbotUiAction[] {
