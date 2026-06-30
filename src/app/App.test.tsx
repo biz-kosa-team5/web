@@ -384,6 +384,17 @@ describe('App public map surface', () => {
 
     expect(rootElement.textContent).toContain('질문 분석 중');
     expect(rootElement.textContent).toContain('답변을 준비하고 있습니다.');
+    expect(rootElement.querySelector('.chatbot-progress')?.textContent).toBe('질문 분석 중');
+    expect(rootElement.querySelector('.chatbot-progress ol')).toBeNull();
+
+    await act(async () => {
+      stream.enqueue(sseFrame('status', { label: '작업 1/1 처리 중', step: 3, total: 5 }));
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.querySelector('.chatbot-progress')?.textContent).toBe('작업 처리 중');
+    expect(rootElement.textContent).not.toContain('작업 1/1 처리 중');
 
     await act(async () => {
       stream.enqueue(sseFrame('status', { label: '답변 문장 정리 중', step: 5, total: 5 }));
@@ -394,6 +405,8 @@ describe('App public map surface', () => {
     await flushAsyncState();
 
     expect(rootElement.textContent).toContain('답변 문장 정리 중');
+    expect(rootElement.querySelector('.chatbot-progress')?.textContent).toBe('답변 문장 정리 중');
+    expect(rootElement.querySelector('.chatbot-progress')?.textContent).not.toContain('질문 분석 중');
     expect(rootElement.textContent).toContain('잠실엘스는 송파구 잠실동에 있습니다.');
 
     await act(async () => {

@@ -444,63 +444,34 @@
 }
 
 .chatbot-progress {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
   align-self: flex-start;
   width: min(100%, var(--chatbot-assistant-message-width, 330px));
+  min-height: 34px;
+  align-items: center;
+  gap: 8px;
   padding: 9px 10px;
   border: 1px solid var(--hs-border-default);
   border-radius: 12px;
   background: var(--hs-surface-control);
-  color: var(--hs-text-secondary);
+  color: var(--hs-color-primary-strong);
 }
 
-.chatbot-progress ol {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.chatbot-progress li {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  align-items: center;
-  gap: 7px;
-  min-height: 22px;
-  color: var(--hs-text-secondary);
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-.chatbot-progress li span {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  align-items: center;
-  justify-content: center;
+.chatbot-progress span {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--hs-surface-control-muted);
-  color: var(--hs-text-secondary);
-  font-size: 10px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
+  background: var(--hs-color-primary);
+  box-shadow: 0 0 0 4px var(--hs-color-primary-soft);
 }
 
-.chatbot-progress li strong {
+.chatbot-progress strong {
   min-width: 0;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.25;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.3;
   overflow-wrap: anywhere;
-}
-
-.chatbot-progress li[data-chatbot-progress-current="true"] {
-  color: var(--hs-color-primary-strong);
-}
-
-.chatbot-progress li[data-chatbot-progress-current="true"] span {
-  background: var(--hs-color-primary-soft);
-  color: var(--hs-color-primary-strong);
 }
 
 .chatbot-form {
