@@ -175,8 +175,14 @@ export type ChatbotMessage =
       id: string;
       role: 'assistant';
       content: string;
-      response: ChatbotResponse;
+      response: ChatbotResponse | null;
     };
+
+export type ChatbotProgressStep = {
+  label: string;
+  step: number;
+  total: number;
+};
 
 export type ChatbotRequestState =
   | {
@@ -186,6 +192,8 @@ export type ChatbotRequestState =
   | {
       status: 'loading';
       error: null;
+      phaseLabel: string;
+      steps: ChatbotProgressStep[];
     }
   | {
       status: 'error';

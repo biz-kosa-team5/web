@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CHATBOT_HISTORY_STORAGE_KEY } from '../features/chatbot/chatbotHistory';
 import { App } from './App';
 
 describe('App public map surface', () => {
@@ -360,58 +361,222 @@ describe('App public map surface', () => {
     unmount(root);
   });
 
-  it('stores chatbot memory patch and includes it in the next question', async () => {
+  it('streams chatbot progress, answer deltas, final actions, and hides raw payload details', async () => {
+    const stream = controlledStreamResponse();
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
+      if (url.includes('/api/v1/chatbot/query/stream')) {
+        return Promise.resolve(stream.response);
+      }
+
+      return Promise.resolve(jsonResponse(apiPayloadForUrl(url)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+    await submitChatbotQuestion(rootElement, '잠실엘스 위치 알려줘');
+
+    await act(async () => {
+      stream.enqueue(sseFrame('status', { label: '질문 분석 중', step: 1, total: 5 }));
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('질문 분석 중');
+    expect(rootElement.textContent).toContain('답변을 준비하고 있습니다.');
+
+    await act(async () => {
+      stream.enqueue(sseFrame('status', { label: '답변 문장 정리 중', step: 5, total: 5 }));
+      stream.enqueue(sseFrame('answer_delta', { text: '잠실엘스는 ' }));
+      stream.enqueue(sseFrame('answer_delta', { text: '송파구 잠실동에 있습니다.' }));
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('답변 문장 정리 중');
+    expect(rootElement.textContent).toContain('잠실엘스는 송파구 잠실동에 있습니다.');
+
+    await act(async () => {
+      stream.enqueue(sseFrame('final', chatbotStreamFocusPayload()));
+      stream.close();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+    await flushAsyncState();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/chatbot/query/stream'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ question: '잠실엘스 위치 알려줘' }),
+      }),
+    );
+    expect(rootElement.textContent).toContain('잠실엘스 지도 보기');
+    expect(rootElement.textContent).not.toContain('37.5124');
+    expect(rootElement.textContent).not.toContain('127.0821');
+    expect(rootElement.textContent).not.toContain('"handler"');
+
+    const lastComplexCall = fetchMock.mock.calls
+      .filter(([url]) => String(url).includes('/api/v1/map/complexes'))
+      .at(-1);
+    const markerBody = JSON.parse(String((lastComplexCall?.[1] as RequestInit).body));
+    expect(markerBody.swLat).toBeCloseTo(37.5024);
+    expect(markerBody.swLng).toBeCloseTo(127.0721);
+
+    unmount(root);
+  });
+
+  it('falls back to the existing chatbot query endpoint when streaming fails', async () => {
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
+      if (url.includes('/api/v1/chatbot/query/stream')) {
+        return Promise.resolve(errorResponse(503, { detail: 'stream unavailable' }));
+      }
+      if (url.includes('/api/v1/chatbot/query')) {
+        return Promise.resolve(jsonResponse({
+          success: true,
+          answer: '기존 API fallback 답변입니다.',
+        }));
+      }
+
+      return Promise.resolve(jsonResponse(apiPayloadForUrl(url)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+    await submitChatbotQuestion(rootElement, 'fallback 질문');
+    await flushAsyncState();
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/chatbot/query/stream'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/v1/chatbot/query'))).toBe(true);
+    expect(rootElement.textContent).toContain('기존 API fallback 답변입니다.');
+
+    unmount(root);
+  });
+
+  it('stores final chatbot messages in window.localStorage and restores them on reload', async () => {
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
+      if (url.includes('/api/v1/chatbot/query')) {
+        return Promise.resolve(jsonResponse({
+          success: true,
+          answer: '저장된 챗봇 답변입니다.',
+        }));
+      }
+
+      return Promise.resolve(jsonResponse(apiPayloadForUrl(url)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const firstRender = await renderApp();
+    await flushAsyncState();
+    await submitChatbotQuestion(firstRender.rootElement, '저장할 질문');
+    await flushAsyncState();
+
+    const rawHistory = window.localStorage.getItem(CHATBOT_HISTORY_STORAGE_KEY);
+    expect(rawHistory).not.toBeNull();
+    expect(JSON.parse(String(rawHistory)).messages).toEqual([
+      expect.objectContaining({ role: 'user', content: '저장할 질문' }),
+      expect.objectContaining({ role: 'assistant', content: '저장된 챗봇 답변입니다.' }),
+    ]);
+
+    unmount(firstRender.root);
+
+    const secondRender = await renderApp();
+    await flushAsyncState();
+    await act(async () => {
+      getButton(secondRender.rootElement, 'AI 집찾기').click();
+    });
+
+    expect(secondRender.rootElement.textContent).toContain('저장할 질문');
+    expect(secondRender.rootElement.textContent).toContain('저장된 챗봇 답변입니다.');
+
+    unmount(secondRender.root);
+  });
+
+  it('deletes expired chatbot history before restore', async () => {
+    window.localStorage.setItem(CHATBOT_HISTORY_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      savedAt: new Date(Date.now() - 2).toISOString(),
+      expiresAt: new Date(Date.now() - 1).toISOString(),
+      messages: [
+        {
+          id: 'old-user',
+          role: 'user',
+          content: '만료된 질문',
+        },
+      ],
+    }));
+    const fetchMock = vi.fn((url: string) => Promise.resolve(jsonResponse(apiPayloadForUrl(url))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+    await act(async () => {
+      getButton(rootElement, 'AI 집찾기').click();
+    });
+
+    expect(window.localStorage.getItem(CHATBOT_HISTORY_STORAGE_KEY) ?? '').not.toContain('만료된 질문');
+    expect(rootElement.textContent).not.toContain('만료된 질문');
+
+    unmount(root);
+  });
+
+  it('stores chatbot memory patch and includes it in the next stream question', async () => {
     let chatbotCallCount = 0;
     const patchUpdatedAt = new Date().toISOString();
     const patchExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
-      if (url.includes('/api/v1/chatbot/query')) {
+      if (url.includes('/api/v1/chatbot/query/stream')) {
         chatbotCallCount += 1;
-        return Promise.resolve(jsonResponse(
-          chatbotCallCount === 1
-            ? {
-                success: true,
-                answer: '대치동 최신 실거래입니다.',
-                conversationMemoryPatch: {
-                  version: 'v1',
-                  activeRegion: {
-                    name: '대치동',
-                    code: '11680106',
-                    type: 'neighborhood',
+        return Promise.resolve(streamResponse([
+          sseFrame(
+            'final',
+            chatbotCallCount === 1
+              ? {
+                  success: true,
+                  answer: '대치동 최신 실거래입니다.',
+                  conversationMemoryPatch: {
+                    version: 'v1',
+                    activeRegion: {
+                      name: '대치동',
+                      code: '11680106',
+                      type: 'neighborhood',
+                    },
+                    items: [
+                      {
+                        index: 1,
+                        kind: 'complex',
+                        complexId: 3810,
+                        complexName: '풍림아이원2차202동',
+                        address: '대치동 910-6',
+                        tradeId: 7781885,
+                        dealDate: '2026-06-23',
+                        dealAmount: 255000,
+                      },
+                      {
+                        index: 2,
+                        kind: 'complex',
+                        complexId: 1001,
+                        complexName: '래미안대치팰리스',
+                        address: '대치동 1027',
+                        tradeId: 7781906,
+                        dealDate: '2026-06-16',
+                        dealAmount: 445000,
+                      },
+                    ],
+                    lastHandler: 'simple_lookup',
+                    lastQueryType: 'region_trade_history',
+                    updatedAt: patchUpdatedAt,
+                    expiresAt: patchExpiresAt,
                   },
-                  items: [
-                    {
-                      index: 1,
-                      kind: 'complex',
-                      complexId: 3810,
-                      complexName: '풍림아이원2차202동',
-                      address: '대치동 910-6',
-                      tradeId: 7781885,
-                      dealDate: '2026-06-23',
-                      dealAmount: 255000,
-                    },
-                    {
-                      index: 2,
-                      kind: 'complex',
-                      complexId: 1001,
-                      complexName: '래미안대치팰리스',
-                      address: '대치동 1027',
-                      tradeId: 7781906,
-                      dealDate: '2026-06-16',
-                      dealAmount: 445000,
-                    },
-                  ],
-                  lastHandler: 'simple_lookup',
-                  lastQueryType: 'region_trade_history',
-                  updatedAt: patchUpdatedAt,
-                  expiresAt: patchExpiresAt,
+                }
+              : {
+                  success: true,
+                  answer: '래미안대치팰리스 흐름입니다.',
                 },
-              }
-            : {
-                success: true,
-                answer: '래미안대치팰리스 흐름입니다.',
-              },
-        ));
+          ),
+        ]));
       }
 
       return Promise.resolve(jsonResponse([]));
@@ -462,7 +627,7 @@ describe('App public map surface', () => {
     });
     await flushAsyncState();
 
-    const chatbotCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/v1/chatbot/query'));
+    const chatbotCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/v1/chatbot/query/stream'));
     expect(chatbotCalls).toHaveLength(2);
     expect(JSON.parse(String((chatbotCalls[0][1] as RequestInit).body))).toEqual({
       question: '대치동 최신 실거래가 3개 뽑아줘',
@@ -743,6 +908,64 @@ function jsonResponse(body: unknown): Response {
     ok: true,
     status: 200,
     json: async () => body,
+  } as Response;
+}
+
+function errorResponse(status: number, body: unknown): Response {
+  return {
+    ok: false,
+    status,
+    json: async () => body,
+  } as Response;
+}
+
+function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function controlledStreamResponse() {
+  const encoder = new TextEncoder();
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      streamController = controller;
+    },
+  });
+
+  return {
+    response: {
+      ok: true,
+      status: 200,
+      body,
+    } as Response,
+    enqueue(frame: string) {
+      if (streamController == null) {
+        throw new Error('Stream controller is not ready');
+      }
+      streamController.enqueue(encoder.encode(frame));
+    },
+    close() {
+      if (streamController == null) {
+        throw new Error('Stream controller is not ready');
+      }
+      streamController.close();
+    },
+  };
+}
+
+function streamResponse(chunks: string[]): Response {
+  const encoder = new TextEncoder();
+  return {
+    ok: true,
+    status: 200,
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(chunk));
+        }
+        controller.close();
+      },
+    }),
   } as Response;
 }
 
@@ -1047,6 +1270,26 @@ function chatbotFocusPayload({
       primaryTargetName: target.name,
       primaryActionLabel: `${target.name} 지도 보기`,
       artifactTypes: [],
+    },
+  };
+}
+
+function chatbotStreamFocusPayload() {
+  return {
+    ...chatbotFocusPayload({
+      kind: 'complex',
+      openDetail: false,
+    }),
+    answer: '잠실엘스는 송파구 잠실동에 있습니다.',
+    result: {
+      handler: 'simple_lookup',
+      data: [
+        {
+          complex_name: '잠실엘스',
+          latitude: 37.5124,
+          longitude: 127.0821,
+        },
+      ],
     },
   };
 }

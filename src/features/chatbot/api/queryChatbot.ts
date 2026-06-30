@@ -46,7 +46,7 @@ export async function queryChatbot(
   return normalizeChatbotResponse(payload);
 }
 
-function isChatbotResponse(value: unknown): value is ChatbotResponse {
+export function isChatbotResponse(value: unknown): value is ChatbotResponse {
   return (
     typeof value === 'object'
     && value !== null
@@ -55,7 +55,7 @@ function isChatbotResponse(value: unknown): value is ChatbotResponse {
   );
 }
 
-function normalizeChatbotResponse(payload: ChatbotResponse): ChatbotResponse {
+export function normalizeChatbotResponse(payload: ChatbotResponse): ChatbotResponse {
   const normalized: ChatbotResponse = {
     ...payload,
     uiActions: normalizeUiActions(payload.uiActions),
