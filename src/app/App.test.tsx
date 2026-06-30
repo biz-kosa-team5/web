@@ -18,8 +18,8 @@ describe('App public map surface', () => {
     const { root, rootElement } = await renderApp();
     await flushAsyncState();
 
-    expect(rootElement.textContent).toContain('Home Search');
-    expect(rootElement.textContent).toContain('지도 탐색');
+    expect(rootElement.textContent).toContain('홈서치');
+    expect(rootElement.textContent).toContain('HomeSearch · 실거래가 인사이트');
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/map/regions'),
       expect.objectContaining({ method: 'POST' }),
@@ -37,9 +37,261 @@ describe('App public map surface', () => {
     const { root, rootElement } = await renderApp();
     await flushAsyncState();
 
-    expect(rootElement.textContent).toContain('Home Search');
+    expect(rootElement.textContent).toContain('홈서치');
     expect(rootElement.textContent).not.toContain('관리자 접근');
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/admin/'))).toBe(false);
+
+    unmount(root);
+  });
+
+  it('renders chip range filters without a submit apply button', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+
+    expect(getButton(rootElement, '세대수')).not.toBeNull();
+    expect(getButton(rootElement, '평형')).not.toBeNull();
+    expect(getButton(rootElement, '가격')).not.toBeNull();
+    expect(getButton(rootElement, '입주년차')).not.toBeNull();
+    expect(rootElement.textContent).toContain('초기화');
+    expect(Array.from(rootElement.querySelectorAll('button')).some(
+      (button) => button.textContent === '적용',
+    )).toBe(false);
+
+    unmount(root);
+  });
+
+  it('commits complex marker filter ranges as the existing API payload fields', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp({ initialMapLevel: 4 });
+    await flushAsyncState();
+
+    await act(async () => {
+      getButton(rootElement, '가격').click();
+    });
+
+    const minInput = rootElement.querySelector<HTMLInputElement>('input[aria-label="가격 최소"]');
+    const maxInput = rootElement.querySelector<HTMLInputElement>('input[aria-label="가격 최대"]');
+    expect(minInput).not.toBeNull();
+    expect(maxInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(minInput!, '10');
+      setInputValue(maxInput!, '30');
+      window.dispatchEvent(new Event('pointerup'));
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    const markerBody = lastJsonBodyFor(fetchMock, '/api/v1/map/complexes');
+    expect(markerBody).toEqual(expect.objectContaining({
+      swLat: expect.any(Number),
+      swLng: expect.any(Number),
+      neLat: expect.any(Number),
+      neLng: expect.any(Number),
+      priceEokMin: 10,
+      priceEokMax: 30,
+      pyeongMin: null,
+      pyeongMax: null,
+      ageMin: null,
+      ageMax: null,
+      unitMin: null,
+      unitMax: null,
+    }));
+
+    unmount(root);
+  });
+
+  it('resets full range filters back to null marker request fields', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp({ initialMapLevel: 4 });
+    await flushAsyncState();
+
+    await act(async () => {
+      getButton(rootElement, '세대수').click();
+    });
+
+    const minInput = rootElement.querySelector<HTMLInputElement>('input[aria-label="세대수 최소"]');
+    expect(minInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(minInput!, '500');
+      window.dispatchEvent(new Event('pointerup'));
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    await act(async () => {
+      getButton(rootElement, '초기화').click();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    const markerBody = lastJsonBodyFor(fetchMock, '/api/v1/map/complexes');
+    expect(markerBody).toEqual(expect.objectContaining({
+      pyeongMin: null,
+      pyeongMax: null,
+      priceEokMin: null,
+      priceEokMax: null,
+      ageMin: null,
+      ageMax: null,
+      unitMin: null,
+      unitMax: null,
+    }));
+
+    unmount(root);
+  });
+
+  it('does not mix complex filter fields into region marker requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root } = await renderApp({ initialMapLevel: 10 });
+    await flushAsyncState();
+
+    const markerBody = lastJsonBodyFor(fetchMock, '/api/v1/map/regions');
+    expect(markerBody).toEqual({
+      swLat: expect.any(Number),
+      swLng: expect.any(Number),
+      neLat: expect.any(Number),
+      neLng: expect.any(Number),
+      region: 'district',
+    });
+    expect(markerBody).not.toHaveProperty('priceEokMin');
+    expect(markerBody).not.toHaveProperty('unitMin');
+
+    unmount(root);
+  });
+
+  it('shows region complexes only after selecting a neighborhood', async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(jsonResponse(regionSelectionPayloadForUrl(url))),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp({ initialRegionLoad: true });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).not.toContain('강변');
+    expect(rootElement.textContent).not.toContain('경남');
+    expect(rootElement.textContent).not.toContain('잠원동 53-15');
+
+    await act(async () => {
+      getButton(rootElement, '서초구').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('잠원동');
+    expect(rootElement.textContent).not.toContain('강변');
+    expect(rootElement.textContent).not.toContain('경남');
+    expect(rootElement.textContent).not.toContain('잠원동 53-15');
+
+    await act(async () => {
+      getButton(rootElement, '잠원동').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('강변');
+    expect(rootElement.textContent).toContain('잠원동 53-15');
+    expect(rootElement.textContent).not.toContain('경남');
+    expect(rootElement.textContent).not.toContain('방배동 1028-1');
+
+    unmount(root);
+  });
+
+  it('paginates parent region complexes before filtering selected neighborhood', async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(jsonResponse(paginatedRegionSelectionPayloadForUrl(url))),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp({ initialRegionLoad: true });
+    await flushAsyncState();
+
+    await act(async () => {
+      getButton(rootElement, '송파구').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('가락동');
+    expect(rootElement.textContent).not.toContain('극동');
+    expect(rootElement.textContent).not.toContain('가락동 192');
+
+    await act(async () => {
+      getButton(rootElement, '가락동').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+    await flushAsyncState();
+
+    expect(rootElement.textContent).toContain('극동');
+    expect(rootElement.textContent).toContain('가락동 192');
+    expect(rootElement.textContent).toContain('대림');
+    expect(rootElement.textContent).toContain('가락동 70-19');
+    expect(fetchMock.mock.calls.some(([url]) =>
+      String(url).includes('/api/v1/region/11710/complexes?limit=100&offset=100'),
+    )).toBe(true);
+
+    unmount(root);
+  });
+
+  it('focuses the map after selecting a search suggestion without coordinates', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/api/v1/search/complexes/suggestions')) {
+        return Promise.resolve(jsonResponse([
+          {
+            complexId: 1002,
+            complexName: '잠실엘스',
+            parcelId: 9001002,
+            address: '잠실동 19',
+          },
+        ]));
+      }
+
+      return Promise.resolve(jsonResponse(apiPayloadForUrl(url)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+
+    const searchInput = rootElement.querySelector<HTMLInputElement>('input[aria-label="단지 검색"]');
+    expect(searchInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(searchInput!, '잠실엘스');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    await act(async () => {
+      getButtonByAriaLabel(rootElement, '검색 제안 선택 잠실엘스').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+    await flushAsyncState();
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/v1/complex/1002'))).toBe(true);
+    const markerBody = lastJsonBodyFor(fetchMock, '/api/v1/map/complexes');
+    expect(markerBody.swLat).toBeCloseTo(37.5024);
+    expect(markerBody.neLat).toBeCloseTo(37.5224);
+    expect(markerBody.swLng).toBeCloseTo(127.0721);
+    expect(markerBody.neLng).toBeCloseTo(127.0921);
 
     unmount(root);
   });
@@ -229,13 +481,17 @@ describe('App public map surface', () => {
   });
 });
 
-async function renderApp() {
+async function renderApp(appProps: {
+  initialMapLevel?: number;
+  initialRegionLoad?: boolean;
+  kakaoMapAppKey?: string;
+} = {}) {
   const rootElement = document.createElement('div');
   document.body.appendChild(rootElement);
   const root = createRoot(rootElement);
 
   await act(async () => {
-    root.render(<App initialRegionLoad={false} kakaoMapAppKey="" />);
+    root.render(<App initialRegionLoad={false} kakaoMapAppKey="" {...appProps} />);
   });
 
   return { root, rootElement };
@@ -327,6 +583,191 @@ function apiPayloadForUrl(url: string): unknown {
     return [];
   }
   return [];
+}
+
+function regionSelectionPayloadForUrl(url: string): unknown {
+  const path = new URL(url).pathname;
+  if (path === '/api/v1/map/complexes' || path === '/api/v1/map/regions') {
+    return [];
+  }
+  if (path === '/api/v1/region') {
+    return [
+      {
+        id: 11,
+        name: '서초구',
+      },
+    ];
+  }
+  if (path === '/api/v1/region/11') {
+    return {
+      id: 11,
+      name: '서초구',
+      latitude: 37.4837,
+      longitude: 127.0324,
+      children: [
+        {
+          id: 111,
+          name: '잠원동',
+        },
+      ],
+    };
+  }
+  if (path === '/api/v1/region/11/complexes') {
+    return [
+      {
+        complexId: 1001,
+        complexName: '강변',
+        parcelId: 9001,
+        latitude: 37.5188,
+        longitude: 127.0126,
+        address: '잠원동 53-15',
+        dongCnt: null,
+        unitCnt: null,
+        useDate: null,
+      },
+      {
+        complexId: 1002,
+        complexName: '경남',
+        parcelId: 9002,
+        latitude: 37.4788,
+        longitude: 126.9926,
+        address: '방배동 1028-1',
+        dongCnt: null,
+        unitCnt: null,
+        useDate: null,
+      },
+    ];
+  }
+  if (path === '/api/v1/region/111') {
+    return {
+      id: 111,
+      name: '잠원동',
+      latitude: 37.5188,
+      longitude: 127.0126,
+      children: [],
+    };
+  }
+  if (path === '/api/v1/region/111/complexes') {
+    return [];
+  }
+  if (path.endsWith('/complexes')) {
+    return [
+      {
+        complexId: 9999,
+        complexName: '숨겨져야 하는 단지',
+        parcelId: 9999,
+        latitude: 37.5,
+        longitude: 127,
+        address: '읍면동 전에는 숨김',
+        dongCnt: null,
+        unitCnt: null,
+        useDate: null,
+      },
+    ];
+  }
+  return [];
+}
+
+function paginatedRegionSelectionPayloadForUrl(url: string): unknown {
+  const requestUrl = new URL(url);
+  const { pathname } = requestUrl;
+
+  if (pathname === '/api/v1/region') {
+    return [
+      {
+        id: 11710,
+        name: '송파구',
+      },
+    ];
+  }
+  if (pathname === '/api/v1/region/11710') {
+    return {
+      id: 11710,
+      name: '송파구',
+      latitude: 37.5145,
+      longitude: 127.1059,
+      children: [
+        {
+          id: 11710107,
+          name: '가락동',
+        },
+      ],
+    };
+  }
+  if (pathname === '/api/v1/region/11710107') {
+    return {
+      id: 11710107,
+      name: '가락동',
+      latitude: 37.497,
+      longitude: 127.125,
+      children: [],
+    };
+  }
+  if (pathname === '/api/v1/region/11710107/complexes') {
+    return [];
+  }
+  if (pathname === '/api/v1/region/11710/complexes') {
+    const offset = Number(requestUrl.searchParams.get('offset') ?? '0');
+    if (offset === 0) {
+      return Array.from({ length: 100 }, (_, index) =>
+        regionComplexFixture({
+          complexId: 2000 + index,
+          complexName: `다른단지${index}`,
+          address: `문정동 ${index}`,
+        }),
+      );
+    }
+    if (offset === 100) {
+      return [
+        regionComplexFixture({
+          complexId: 11474,
+          complexName: '극동',
+          address: '가락동 192',
+        }),
+        regionComplexFixture({
+          complexId: 11592,
+          complexName: '대련',
+          address: '가락동 166-15',
+        }),
+        regionComplexFixture({
+          complexId: 11572,
+          complexName: '대림',
+          address: '가락동 70-19',
+        }),
+        regionComplexFixture({
+          complexId: 11999,
+          complexName: '다른동',
+          address: '방이동 1',
+        }),
+      ];
+    }
+  }
+  if (pathname.includes('/api/v1/map/')) {
+    return [];
+  }
+  return [];
+}
+
+function regionComplexFixture({
+  complexId,
+  complexName,
+  address,
+}: {
+  complexId: number;
+  complexName: string;
+  address: string;
+}) {
+  return {
+    complexId,
+    complexName,
+    parcelId: complexId + 100000,
+    latitude: 37.5,
+    longitude: 127.1,
+    address,
+    dongCnt: null,
+    unitCnt: null,
+    useDate: null,
+  };
 }
 
 function chatbotFocusPayload({
@@ -487,6 +928,44 @@ function getButton(rootElement: HTMLElement, name: string): HTMLButtonElement {
   }
 
   return button;
+}
+
+function getButtonByAriaLabel(rootElement: HTMLElement, label: string): HTMLButtonElement {
+  const button = Array.from(rootElement.querySelectorAll('button')).find(
+    (candidate) => candidate.getAttribute('aria-label') === label,
+  );
+
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Button not found by aria-label: ${label}`);
+  }
+
+  return button;
+}
+
+function lastJsonBodyFor(fetchMock: ReturnType<typeof vi.fn>, path: string) {
+  const call = fetchMock.mock.calls
+    .filter(([url]) => String(url).includes(path))
+    .at(-1);
+  if (call == null) {
+    throw new Error(`No fetch call found for ${path}`);
+  }
+  return JSON.parse(String((call[1] as RequestInit).body));
+}
+
+function setInputValue(element: HTMLInputElement, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(element, 'value')?.set;
+  const prototypeValueSetter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    'value',
+  )?.set;
+
+  if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+    prototypeValueSetter.call(element, value);
+  } else {
+    valueSetter?.call(element, value);
+  }
+
+  element.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function setTextAreaValue(element: HTMLTextAreaElement, value: string) {

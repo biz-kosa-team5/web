@@ -1,25 +1,26 @@
 :root {
-  --hs-color-ink: #17202a;
-  --hs-color-ink-soft: #27313d;
-  --hs-color-muted: #66727c;
-  --hs-color-muted-strong: #46525e;
-  --hs-color-paper: #f4f6f2;
-  --hs-color-map-paper: #dfe7e4;
+  --hs-color-ink: #0f172a;
+  --hs-color-ink-soft: #1e293b;
+  --hs-color-muted: #64748b;
+  --hs-color-muted-strong: #475569;
+  --hs-color-paper: #f8fafc;
+  --hs-color-map-paper: #f1f5f9;
   --hs-color-surface: #ffffff;
-  --hs-color-surface-muted: #f7f9f8;
-  --hs-color-line: #d8e0dd;
-  --hs-color-line-strong: #bdc9c6;
-  --hs-color-primary: #153847;
-  --hs-color-primary-soft: #e8eff1;
+  --hs-color-surface-muted: #f8fafc;
+  --hs-color-line: #e2e8f0;
+  --hs-color-line-strong: #cbd5e1;
+  --hs-color-primary: #38bdf8;
+  --hs-color-primary-strong: #0284c7;
+  --hs-color-primary-soft: #e0f2fe;
   --hs-color-complex: #0e6b5e;
   --hs-color-complex-soft: #e7f3ef;
   --hs-color-region: #315f83;
   --hs-color-region-soft: #e8f1f7;
-  --hs-color-trade: #1f7a68;
+  --hs-color-trade: #0284c7;
   --hs-color-warning: #a86619;
-  --hs-color-error: #af4b45;
-  --hs-color-error-soft: #f8edeb;
-  --hs-color-grid-line: rgba(255, 255, 255, 0.7);
+  --hs-color-error: #e11d48;
+  --hs-color-error-soft: #fff1f2;
+  --hs-color-grid-line: rgba(255, 255, 255, 0.72);
   --hs-color-layer: #ffffff;
   --hs-color-layer-strong: #ffffff;
 
@@ -33,7 +34,7 @@
   --hs-surface-control-muted: var(--hs-color-surface-muted);
   --hs-border-default: var(--hs-color-line);
   --hs-border-strong: var(--hs-color-line-strong);
-  --hs-action-primary: var(--hs-color-primary);
+  --hs-action-primary: var(--hs-color-primary-strong);
   --hs-action-secondary: var(--hs-color-complex);
   --hs-marker-complex: var(--hs-color-complex);
   --hs-marker-region: var(--hs-color-region);
@@ -41,12 +42,15 @@
   --hs-state-error: var(--hs-color-error);
   --hs-state-error-surface: var(--hs-color-error-soft);
 
-  --hs-appbar-height: 56px;
-  --hs-appbar-height-compact: 52px;
-  --hs-control-height: 36px;
-  --hs-control-height-compact: 32px;
-  --hs-control-radius: 6px;
-  --hs-panel-radius: 8px;
+  --hs-appbar-height: 66px;
+  --hs-appbar-height-compact: 58px;
+  --hs-sidebar-width: 430px;
+  --hs-sidebar-width-compact: 380px;
+  --hs-control-height: 38px;
+  --hs-control-height-compact: 34px;
+  --hs-control-radius: 12px;
+  --hs-panel-radius: 16px;
+  --hs-compact-radius: 10px;
   --hs-marker-radius: 6px;
   --hs-space-1: 4px;
   --hs-space-2: 8px;
@@ -58,12 +62,13 @@
   --hs-z-panel: 4;
   --hs-z-appbar: 10;
   --hs-z-drawer: 12;
-  --hs-shadow-appbar: 0 2px 10px rgba(23, 32, 42, 0.08);
-  --hs-shadow-panel: 0 8px 20px rgba(23, 32, 42, 0.12);
-  --hs-shadow-drawer: 0 14px 32px rgba(23, 32, 42, 0.2);
+  --hs-shadow-appbar: 0 2px 10px rgba(15, 23, 42, 0.05);
+  --hs-shadow-panel: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --hs-shadow-dropdown: 0 10px 30px rgba(15, 23, 42, 0.18);
+  --hs-shadow-drawer: 0 18px 46px rgba(15, 23, 42, 0.16);
   --hs-shadow-marker: 0 3px 8px rgba(23, 32, 42, 0.18);
-  --hs-focus-ring: 0 0 0 3px rgba(14, 107, 94, 0.22);
-  --hs-focus-ring-strong: 0 0 0 3px rgba(21, 56, 71, 0.28);
+  --hs-focus-ring: 0 0 0 3px rgba(56, 189, 248, 0.24);
+  --hs-focus-ring-strong: 0 0 0 3px rgba(2, 132, 199, 0.28);
   --hs-map-grid-background:
     linear-gradient(90deg, var(--hs-color-grid-line) 1px, transparent 1px),
     linear-gradient(180deg, var(--hs-color-grid-line) 1px, transparent 1px),
@@ -105,11 +110,11 @@
 .hs-button-ghost {
   border-color: transparent;
   background: transparent;
-  color: var(--hs-action-secondary);
+  color: var(--hs-action-primary);
 }
 
 .hs-button-ghost:hover {
-  background: var(--hs-color-complex-soft);
+  background: var(--hs-color-primary-soft);
 }
 
 .hs-panel,

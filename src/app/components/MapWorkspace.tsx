@@ -6,31 +6,27 @@ import type {
   ComplexMapMarker,
   MapFocusTarget,
   MapViewport,
-  MarkerRequestState,
   RegionMapMarker,
 } from '../appTypes';
-import { mapRuntimeStatusLabel } from '../appUtils';
-import { FallbackMarkerLayer, MarkerPreviewList } from './MarkerPreviewList';
+import { FallbackMarkerLayer } from './MarkerPreviewList';
 import { MarkerFilterPanel } from './MarkerFilterPanel';
-import type { MapMarkersResult } from '../../features/map/api/fetchMapMarkers';
-import type { FormEvent } from 'react';
+import type {
+  ComplexMarkerFilters,
+  MapMarkersResult,
+} from '../../features/map/api/fetchMapMarkers';
 
 export function MapWorkspace({
   activeFilterCount,
-  filterFormKey,
   initialMapLevel,
   kakaoMapAppKey,
   mapFocusTarget,
-  mapRuntimeError,
   mapRuntimeState,
-  markerError,
-  markerState,
+  markerFilters,
   markers,
   onComplexMarkerSelect,
   onFilterReset,
-  onFilterSubmit,
+  onFiltersChange,
   onRegionMarkerSelect,
-  onRetryMarkers,
   onRuntimeErrorChange,
   onRuntimeStateChange,
   onViewportChange,
@@ -39,20 +35,16 @@ export function MapWorkspace({
   viewport,
 }: {
   activeFilterCount: number;
-  filterFormKey: number;
   initialMapLevel: number;
   kakaoMapAppKey: string;
   mapFocusTarget: MapFocusTarget | null;
-  mapRuntimeError: string | null;
   mapRuntimeState: KakaoMapRuntimeState;
-  markerError: string | null;
-  markerState: MarkerRequestState;
+  markerFilters: ComplexMarkerFilters;
   markers: MapMarkersResult | null;
   onComplexMarkerSelect: (marker: ComplexMapMarker) => void;
   onFilterReset: () => void;
-  onFilterSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onFiltersChange: (filters: ComplexMarkerFilters) => void;
   onRegionMarkerSelect: (marker: RegionMapMarker) => void;
-  onRetryMarkers: () => void;
   onRuntimeErrorChange: (error: string | null) => void;
   onRuntimeStateChange: (state: KakaoMapRuntimeState) => void;
   onViewportChange: (viewport: MapViewport) => void;
@@ -62,7 +54,6 @@ export function MapWorkspace({
 }) {
   return (
     <section aria-label="지도 화면" className="map-surface">
-      <p className="map-status">{mapRuntimeStatusLabel(mapRuntimeState)}</p>
       <KakaoMapSurface
         appKey={kakaoMapAppKey}
         focusTarget={mapFocusTarget}
@@ -86,9 +77,9 @@ export function MapWorkspace({
 
       <MarkerFilterPanel
         activeFilterCount={activeFilterCount}
-        filterFormKey={filterFormKey}
+        filters={markerFilters}
         onFilterReset={onFilterReset}
-        onFilterSubmit={onFilterSubmit}
+        onFiltersChange={onFiltersChange}
       />
 
       <div aria-label="지도 조작" className="map-controls">
@@ -99,42 +90,6 @@ export function MapWorkspace({
           -
         </button>
       </div>
-
-      {markerState === 'loading' ? (
-        <p className="map-feedback" role="status" aria-live="polite">
-          마커 불러오는 중
-        </p>
-      ) : null}
-
-      {markerState === 'empty' ? (
-        <p className="map-feedback" role="status" aria-live="polite">
-          이 영역에는 마커가 없습니다
-        </p>
-      ) : null}
-
-      {markerState === 'error' ? (
-        <p className="map-feedback map-feedback-error" role="alert">
-          마커 데이터를 불러오지 못했습니다. 지도는 계속 사용할 수 있습니다.
-          {markerError ? <span className="map-feedback-detail">{markerError}</span> : null}
-          {' '}
-          <button type="button" aria-label="마커 다시 불러오기" onClick={onRetryMarkers}>
-            다시 시도
-          </button>
-        </p>
-      ) : null}
-
-      {mapRuntimeError && markerState !== 'error' ? (
-        <p className="map-feedback map-feedback-error" role="alert">
-          {mapRuntimeError}
-        </p>
-      ) : null}
-
-      <MarkerPreviewList
-        level={viewport.level}
-        markers={markers}
-        onComplexMarkerSelect={onComplexMarkerSelect}
-        onRegionMarkerSelect={onRegionMarkerSelect}
-      />
     </section>
   );
 }

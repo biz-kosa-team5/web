@@ -16,6 +16,9 @@ import {
   regionFocusLevel,
 } from '../appUtils';
 
+const REGION_COMPLEX_PAGE_SIZE = 100;
+const REGION_COMPLEX_MAX_PAGES = 20;
+
 export function useRegionExplorer({
   focusMap,
   initialRegionLoad,
@@ -82,21 +85,37 @@ export function useRegionExplorer({
     regionRequestSeq.current = requestSeq;
     const nextTrail = [...regionTrail, region];
     const nextMapLevel = regionFocusLevel(nextTrail.length);
+    const parentRegion = regionTrail[regionTrail.length - 1];
 
     setRegionState('loading');
     setRegionError(null);
 
-    Promise.all([
-      fetchRegionDetail(region.id),
-      fetchRegionComplexes(region.id, { limit: 20, offset: 0 }),
-    ])
-      .then(([nextDetail, nextComplexes]) => {
+    fetchRegionDetail(region.id)
+      .then(async (nextDetail) => {
+        let nextDisplayComplexes: RegionComplexSummary[] = [];
+
+        if (nextDetail.children.length === 0) {
+          const selectedRegionComplexes = await fetchAllRegionComplexes(region.id);
+          if (selectedRegionComplexes.length > 0) {
+            nextDisplayComplexes = selectedRegionComplexes;
+          } else if (parentRegion != null) {
+            const parentRegionComplexes = await fetchAllRegionComplexes(parentRegion.id);
+            nextDisplayComplexes = complexesInSelectedNeighborhood(
+              parentRegionComplexes,
+              nextDetail.name,
+            );
+          }
+        }
+
+        return { nextDetail, nextDisplayComplexes };
+      })
+      .then(({ nextDetail, nextDisplayComplexes }) => {
         if (requestSeq !== regionRequestSeq.current) {
           return;
         }
 
         setRegionDetail(nextDetail);
-        setRegionComplexes(nextComplexes);
+        setRegionComplexes(nextDisplayComplexes);
         setRootRegions(nextDetail.children);
         setRegionTrail([
           ...regionTrail,
@@ -146,4 +165,43 @@ export function useRegionExplorer({
     regionTrail,
     rootRegions,
   };
+}
+
+function complexesInSelectedNeighborhood(
+  complexes: RegionComplexSummary[],
+  neighborhoodName: string,
+): RegionComplexSummary[] {
+  return complexes.filter((complex) => complex.address?.includes(neighborhoodName));
+}
+
+async function fetchAllRegionComplexes(regionId: number): Promise<RegionComplexSummary[]> {
+  const complexes: RegionComplexSummary[] = [];
+
+  for (let page = 0; page < REGION_COMPLEX_MAX_PAGES; page += 1) {
+    const nextPage = await fetchRegionComplexes(regionId, {
+      limit: REGION_COMPLEX_PAGE_SIZE,
+      offset: page * REGION_COMPLEX_PAGE_SIZE,
+    });
+
+    complexes.push(...nextPage);
+
+    if (nextPage.length < REGION_COMPLEX_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return uniqueComplexes(complexes);
+}
+
+function uniqueComplexes(complexes: RegionComplexSummary[]): RegionComplexSummary[] {
+  const seen = new Set<number>();
+
+  return complexes.filter((complex) => {
+    if (seen.has(complex.complexId)) {
+      return false;
+    }
+
+    seen.add(complex.complexId);
+    return true;
+  });
 }

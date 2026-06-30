@@ -156,17 +156,25 @@ export function mapMarkerPointStyle(
 
 export function regionFocusLevel(depth: number): number {
   if (depth <= 1) {
-    return 9;
+    return 5;
   }
 
   if (depth === 2) {
-    return 6;
+    return 4;
   }
 
   return 4;
 }
 
 export function nextRegionMarkerLevel(level: number): number {
+  if (level >= 7) {
+    return 5;
+  }
+
+  if (level > 4) {
+    return 4;
+  }
+
   return Math.max(1, level - 2);
 }
 
@@ -175,7 +183,7 @@ export function mapFocusDeltaForLevel(level: number): number {
     return 0.2;
   }
 
-  if (level >= 6) {
+  if (level >= 5) {
     return 0.08;
   }
 
@@ -184,15 +192,15 @@ export function mapFocusDeltaForLevel(level: number): number {
 
 export function regionStepLabel(depth: number): string {
   if (depth === 0) {
-    return '시도 선택';
-  }
-
-  if (depth === 1) {
     return '시군구 선택';
   }
 
-  if (depth === 2) {
+  if (depth === 1) {
     return '읍면동 선택';
+  }
+
+  if (depth === 2) {
+    return '단지 선택';
   }
 
   return '단지 선택';
@@ -239,18 +247,17 @@ export function stringFormValue(formData: FormData, field: string): string {
   return typeof value === 'string' ? value : '';
 }
 
-export function numberFormValue(formData: FormData, field: string): number | null {
-  const value = stringFormValue(formData, field).trim();
-  if (value.length === 0) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 export function countActiveFilters(filters: Record<string, number | null | undefined>): number {
-  return Object.values(filters).filter((value) => value != null).length;
+  const groups = [
+    ['unitMin', 'unitMax'],
+    ['pyeongMin', 'pyeongMax'],
+    ['priceEokMin', 'priceEokMax'],
+    ['ageMin', 'ageMax'],
+  ] as const;
+
+  return groups.filter(([minField, maxField]) =>
+    filters[minField] != null || filters[maxField] != null,
+  ).length;
 }
 
 export function mapRuntimeStatusLabel(state: KakaoMapRuntimeState): string {

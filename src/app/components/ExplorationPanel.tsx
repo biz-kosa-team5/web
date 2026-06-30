@@ -3,7 +3,11 @@ import type { ParcelTrades, TradeItem } from '../../features/complex-detail/api/
 import type { TradeTrendPoint } from '../../features/complex-detail/api/fetchTradeTrend';
 import type { ComplexDetail } from '../../features/complex-detail/api/fetchComplexDetail';
 import { DetailSidebar } from '../../features/complex-detail/DetailSidebar';
-import type { RegionComplexSummary, RegionDetail, RegionSummary } from '../../features/region/api/fetchRegions';
+import type {
+  RegionComplexSummary,
+  RegionDetail,
+  RegionSummary,
+} from '../../features/region/api/fetchRegions';
 import type { ComplexSuggestion } from '../../features/search/api/fetchComplexSuggestions';
 import type { ComplexSearchResult } from '../../features/search/api/fetchComplexSearchResults';
 import type {
@@ -97,7 +101,7 @@ export function ExplorationPanel({
     >
       <div className="exploration-panel-header" hidden={sidebarMode === 'detail'}>
         <p>탐색</p>
-        <span>{explorationSummaryLabel(searchResults.length, regionComplexes.length)}</span>
+        <span>{explorationSummaryLabel(searchResults.length, 0)}</span>
       </div>
 
       <SearchForm

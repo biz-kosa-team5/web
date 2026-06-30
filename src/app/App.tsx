@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useState } from 'react';
 
 import type { ComplexMarkerFilters } from '../features/map/api/fetchMapMarkers';
 import type { KakaoMapRuntimeState } from '../features/map/KakaoMapSurface';
@@ -16,13 +16,9 @@ import type {
 } from './appTypes';
 import {
   countActiveFilters,
-  detailHeaderStatusLabel,
   initialComplexSelectionFromUrl,
   mapFocusDeltaForLevel,
-  mapModeLabel,
-  markerSummaryLabel,
   nextRegionMarkerLevel,
-  numberFormValue,
 } from './appUtils';
 import { ExplorationPanel } from './components/ExplorationPanel';
 import { MapWorkspace } from './components/MapWorkspace';
@@ -48,7 +44,7 @@ export function App({
 }
 
 function MapApp({
-  initialMapLevel = 10,
+  initialMapLevel = 8,
   initialRegionLoad = true,
   kakaoMapAppKey = getConfiguredKakaoMapAppKey(),
 }: AppProps) {
@@ -56,13 +52,11 @@ function MapApp({
     EMPTY_COMPLEX_MARKER_FILTERS,
   );
   const [mapRuntimeState, setMapRuntimeState] = useState<KakaoMapRuntimeState>('loading');
-  const [mapRuntimeError, setMapRuntimeError] = useState<string | null>(null);
+  const [, setMapRuntimeError] = useState<string | null>(null);
   const [selectedComplex, setSelectedComplex] = useState<ComplexSelection | null>(
     initialComplexSelectionFromUrl,
   );
-  const [isExplorationOpen, setIsExplorationOpen] = useState(true);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
-  const [filterFormKey, setFilterFormKey] = useState(0);
 
   const {
     focusMap,
@@ -92,9 +86,6 @@ function MapApp({
   }, [focusMap]);
   const chatbot = useChatbot({ onUiAction: handleChatbotUiAction });
   const {
-    handleRetryMarkers,
-    markerError,
-    markerState,
     markers,
   } = useMapMarkers({ markerFilters, viewport });
   const {
@@ -153,7 +144,6 @@ function MapApp({
   const handleRegionMarkerSelect = useCallback((marker: RegionMapMarker) => {
     const nextLevel = nextRegionMarkerLevel(viewport.level);
 
-    setIsExplorationOpen(true);
     focusMap(marker.lat, marker.lng, nextLevel, mapFocusDeltaForLevel(nextLevel));
   }, [focusMap, viewport.level]);
 
@@ -168,25 +158,8 @@ function MapApp({
     });
   }
 
-  function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    setMarkerFilters({
-      pyeongMin: numberFormValue(formData, 'pyeongMin'),
-      pyeongMax: numberFormValue(formData, 'pyeongMax'),
-      priceEokMin: numberFormValue(formData, 'priceEokMin'),
-      priceEokMax: numberFormValue(formData, 'priceEokMax'),
-      ageMin: numberFormValue(formData, 'ageMin'),
-      ageMax: numberFormValue(formData, 'ageMax'),
-      unitMin: numberFormValue(formData, 'unitMin'),
-      unitMax: numberFormValue(formData, 'unitMax'),
-    });
-  }
-
   function handleFilterReset() {
     setMarkerFilters(EMPTY_COMPLEX_MARKER_FILTERS);
-    setFilterFormKey((current) => current + 1);
   }
 
   return (
@@ -194,49 +167,35 @@ function MapApp({
       className="app-shell"
       data-chatbot-open={isChatbotOpen ? 'true' : 'false'}
       data-detail-open={selectedComplex == null ? 'false' : 'true'}
+      data-exploration-open="true"
       data-ui-surface="map-first"
     >
       <header aria-label="상단 앱 바" className="app-bar">
         <div className="app-brand">
-          <h1>Home Search</h1>
-          <span>{selectedComplex == null ? '지도 탐색' : '단지 상세'}</span>
+          <span className="app-brand-mark" aria-hidden="true">
+            <span className="app-brand-mark-roof" />
+            <span className="app-brand-mark-lens" />
+          </span>
+          <span className="app-brand-copy">
+            <h1>홈서치</h1>
+            <span>HomeSearch · 실거래가 인사이트</span>
+          </span>
         </div>
-        <div className="app-status" aria-label="실데이터 상태 요약">
-          <span>{mapModeLabel(viewport.level)}</span>
-          <span>{markerSummaryLabel(markerState, markers)}</span>
-          <span>{detailHeaderStatusLabel(selectedComplex, detailState, parcelTrades)}</span>
-        </div>
-        <button
-          type="button"
-          aria-controls="exploration-panel"
-          aria-expanded={isExplorationOpen}
-          aria-label={isExplorationOpen ? '탐색 패널 접기' : '탐색 패널 열기'}
-          className="exploration-toggle"
-          onClick={() => {
-            setIsExplorationOpen((current) => !current);
-          }}
-        >
-          {isExplorationOpen ? '접기' : '탐색'}
-        </button>
       </header>
 
       <div className="map-workspace" data-layout-region="map-workspace">
         <MapWorkspace
           activeFilterCount={activeFilterCount}
-          filterFormKey={filterFormKey}
           initialMapLevel={initialMapLevel}
           kakaoMapAppKey={kakaoMapAppKey}
           mapFocusTarget={mapFocusTarget}
-          mapRuntimeError={mapRuntimeError}
           mapRuntimeState={mapRuntimeState}
-          markerError={markerError}
-          markerState={markerState}
           markers={markers}
+          markerFilters={markerFilters}
           onComplexMarkerSelect={handleComplexMarkerSelect}
           onFilterReset={handleFilterReset}
-          onFilterSubmit={handleFilterSubmit}
+          onFiltersChange={setMarkerFilters}
           onRegionMarkerSelect={handleRegionMarkerSelect}
-          onRetryMarkers={handleRetryMarkers}
           onRuntimeErrorChange={setMapRuntimeError}
           onRuntimeStateChange={setMapRuntimeState}
           onViewportChange={handleViewportChange}
@@ -250,7 +209,7 @@ function MapApp({
           complexSuggestions={complexSuggestions}
           detailError={detailError}
           detailState={detailState}
-          isExplorationOpen={isExplorationOpen}
+          isExplorationOpen
           onCloseDetail={handleCloseDetailDrawer}
           onComplexSelect={handleComplexSummarySelect}
           onLoadMoreTrades={handleLoadMoreTrades}
