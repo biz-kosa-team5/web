@@ -1,6 +1,12 @@
 import { readProblemDetail } from '../../map/api/readProblemDetail';
 import { resolveApiUrl } from '../../map/api/resolveApiUrl';
-import type { ChatbotResponse, ChatbotUiAction, ChatbotUiArtifact, ChatbotUiSummary } from '../chatbotTypes';
+import type {
+  ChatbotConversationContext,
+  ChatbotResponse,
+  ChatbotUiAction,
+  ChatbotUiArtifact,
+  ChatbotUiSummary,
+} from '../chatbotTypes';
 import { isChatbotResponse, normalizeChatbotResponse, queryChatbot } from './queryChatbot';
 
 const CHATBOT_STREAM_QUERY_PATH = '/api/v1/chatbot/query/stream';
@@ -32,14 +38,15 @@ export async function queryChatbotStream(
   question: string,
   handlers: QueryChatbotStreamHandlers = {},
   signal?: AbortSignal,
+  conversationContext?: ChatbotConversationContext | null,
 ): Promise<ChatbotResponse> {
   try {
-    return await readChatbotStream(question, handlers, signal);
+    return await readChatbotStream(question, handlers, signal, conversationContext);
   } catch (error) {
     if (isAbortFailure(error, signal)) {
       throw error;
     }
-    return queryChatbot(question);
+    return queryChatbot(question, conversationContext);
   }
 }
 
@@ -47,13 +54,17 @@ async function readChatbotStream(
   question: string,
   handlers: QueryChatbotStreamHandlers,
   signal?: AbortSignal,
+  conversationContext?: ChatbotConversationContext | null,
 ): Promise<ChatbotResponse> {
   const response = await fetch(resolveApiUrl(CHATBOT_STREAM_QUERY_PATH), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      ...(conversationContext == null ? {} : { conversationContext }),
+    }),
     signal,
   });
 

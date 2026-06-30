@@ -1,8 +1,65 @@
 export type ChatbotResponse = Record<string, unknown> & {
   answer: string;
+  resolvedQuestion?: string;
+  conversationResolution?: ChatbotConversationResolution | null;
+  conversationMemoryPatch?: ChatbotConversationMemoryPatch | null;
   uiActions: ChatbotUiAction[];
   uiArtifacts: ChatbotUiArtifact[];
   uiSummary: ChatbotUiSummary | null;
+};
+
+export type ChatbotConversationVersion = 'v1';
+
+export type ChatbotConversationRegion = {
+  name: string;
+  code?: string;
+  type?: string;
+};
+
+export type ChatbotConversationTarget = {
+  complexId?: number;
+  complexName: string;
+  address?: string;
+};
+
+export type ChatbotConversationItem = ChatbotConversationTarget & {
+  index: number;
+  kind: 'complex';
+  tradeId?: number;
+  dealDate?: string;
+  dealAmount?: number;
+};
+
+export type ChatbotConversationMemory = {
+  version: ChatbotConversationVersion;
+  activeRegion?: ChatbotConversationRegion;
+  activeComplex?: ChatbotConversationTarget;
+  items: ChatbotConversationItem[];
+  lastHandler?: string;
+  lastQueryType?: string;
+  updatedAt: string;
+  expiresAt: string;
+};
+
+export type ChatbotConversationContext = ChatbotConversationMemory;
+
+export type ChatbotConversationMemoryPatch = {
+  version: ChatbotConversationVersion;
+  activeRegion?: ChatbotConversationRegion;
+  activeComplex?: ChatbotConversationTarget;
+  items?: ChatbotConversationItem[];
+  lastHandler?: string;
+  lastQueryType?: string;
+  updatedAt?: string;
+  expiresAt?: string;
+};
+
+export type ChatbotConversationResolution = {
+  applied: boolean;
+  source?: string;
+  matchedText?: string;
+  resolvedTarget?: string;
+  reason?: string;
 };
 
 export type ChatbotUiAction = {

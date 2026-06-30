@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 
 import { queryChatbotStream } from './api/queryChatbotStream';
 import { loadChatbotHistory, saveChatbotHistory } from './chatbotHistory';
+import {
+  loadChatbotConversationMemory,
+  mergeChatbotConversationMemory,
+  saveChatbotConversationMemory,
+  toChatbotConversationContext,
+} from './chatbotMemory';
 import type {
+  ChatbotConversationMemory,
   ChatbotMessage,
   ChatbotProgressStep,
   ChatbotRequestState,
@@ -14,13 +21,21 @@ const IDLE_REQUEST_STATE: ChatbotRequestState = {
   error: null,
 };
 const INITIAL_LOADING_LABEL = '질문 분석 중';
+const CHATBOT_INTRO_ANSWER = '단지 실거래, 동/구 단위 최신 거래, 추천, 비교, 시세 흐름, 계약 법령을 이어서 물어볼 수 있어요.';
 
 export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => void } = {}) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const messageSequenceRef = useRef(0);
   const executedActionIdsRef = useRef(new Set<string>());
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<ChatbotMessage[]>(() => loadChatbotHistory());
+  const [messages, setMessages] = useState<ChatbotMessage[]>(() => {
+    const initialMessages = initialChatbotMessages();
+    messageSequenceRef.current = maxMessageSequence(initialMessages);
+    return initialMessages;
+  });
+  const [conversationMemory, setConversationMemory] = useState<ChatbotConversationMemory | null>(
+    () => loadChatbotConversationMemory(),
+  );
   const [requestState, setRequestState] = useState<ChatbotRequestState>(IDLE_REQUEST_STATE);
 
   useEffect(() => {
@@ -42,6 +57,7 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
     abortControllerRef.current = abortController;
     const userMessageId = nextMessageId();
     const assistantMessageId = nextMessageId();
+    const conversationContext = toChatbotConversationContext(conversationMemory);
     setInputValue('');
     setRequestState({
       status: 'loading',
@@ -93,10 +109,12 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
           },
         },
         abortController.signal,
+        conversationContext,
       );
       if (abortController.signal.aborted) {
         return;
       }
+
       setMessages((current) => updateAssistantMessage(
         current,
         assistantMessageId,
@@ -106,6 +124,12 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
           response,
         }),
       ));
+      const nextMemory = mergeChatbotConversationMemory(
+        conversationMemory,
+        response.conversationMemoryPatch,
+      );
+      setConversationMemory(nextMemory);
+      saveChatbotConversationMemory(nextMemory);
       runAutoUiAction(assistantMessageId, response.uiActions);
       setRequestState(IDLE_REQUEST_STATE);
     } catch (error) {
@@ -149,6 +173,30 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
     executedActionIdsRef.current.add(executionKey);
     options.onUiAction?.(action);
   }
+}
+
+function initialChatbotMessages(): ChatbotMessage[] {
+  const history = loadChatbotHistory();
+  return history.length > 0 ? history : [introMessage()];
+}
+
+function introMessage(): ChatbotMessage {
+  return {
+    id: 'chatbot-intro-message',
+    role: 'assistant',
+    content: CHATBOT_INTRO_ANSWER,
+    response: null,
+  };
+}
+
+function maxMessageSequence(messages: ChatbotMessage[]): number {
+  return messages.reduce((maxSequence, message) => {
+    const match = /^chatbot-message-(\d+)$/.exec(message.id);
+    if (match == null) {
+      return maxSequence;
+    }
+    return Math.max(maxSequence, Number(match[1]));
+  }, 0);
 }
 
 function updateAssistantMessage(
