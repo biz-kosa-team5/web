@@ -72,6 +72,7 @@ export function useComplexSearch({
         }
 
         setSearchResults(nextResults);
+        setComplexSuggestions([]);
         setSearchState(nextResults.length === 0 ? 'empty' : 'ready');
       })
       .catch((error: unknown) => {
@@ -103,6 +104,7 @@ export function useComplexSearch({
 
     setSearchState('loading');
     setSearchError(null);
+    setSearchResults([]);
 
     fetchComplexSuggestions(query)
       .then((nextSuggestions) => {
@@ -130,6 +132,7 @@ export function useComplexSearch({
       parcelId: result.parcelId,
       complexId: result.complexId,
     });
+    setComplexSuggestions([]);
     focusSelectedComplex(result.complexId, result);
   }
 

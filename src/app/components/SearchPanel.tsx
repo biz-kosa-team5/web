@@ -23,6 +23,9 @@ export function SearchPanel({
   searchResults: ComplexSearchResult[];
   searchState: PanelRequestState;
 }) {
+  const visibleSuggestions = searchResults.length > 0 ? [] : complexSuggestions;
+  const searchStatusLabel = searchState === 'ready' ? null : panelRequestLabel(searchState);
+
   return (
     <section
       id="exploration-panel-search"
@@ -33,12 +36,12 @@ export function SearchPanel({
     >
       <div className="panel-section-header">
         <p>검색 결과</p>
-        <span>{panelRequestLabel(searchState)}</span>
+        {searchStatusLabel ? <span>{searchStatusLabel}</span> : null}
       </div>
 
       <DataCountStrip
         items={[
-          ['제안', complexSuggestions.length],
+          ['제안', visibleSuggestions.length],
           ['결과', searchResults.length],
         ]}
       />
@@ -81,9 +84,9 @@ export function SearchPanel({
         </ul>
       ) : null}
 
-      {complexSuggestions.length > 0 ? (
+      {visibleSuggestions.length > 0 ? (
         <ul aria-label="검색 제안" className="panel-list">
-          {complexSuggestions.map((suggestion) => (
+          {visibleSuggestions.map((suggestion) => (
             <li key={suggestion.complexId}>
               <button
                 type="button"
