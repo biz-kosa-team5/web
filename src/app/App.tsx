@@ -5,7 +5,12 @@ import type { KakaoMapRuntimeState } from '../features/map/KakaoMapSurface';
 import { ChatbotPanel } from '../features/chatbot/ChatbotPanel';
 import type { ChatbotUiAction } from '../features/chatbot/chatbotTypes';
 import { useChatbot } from '../features/chatbot/useChatbot';
-import { EMPTY_COMPLEX_MARKER_FILTERS, SEARCH_FOCUS_DELTA } from './appConstants';
+import {
+  EMPTY_COMPLEX_MARKER_FILTERS,
+  INITIAL_MAP_CENTER,
+  INITIAL_MAP_LEVEL,
+  SEARCH_FOCUS_DELTA,
+} from './appConstants';
 import type {
   AppProps,
   ComplexMapMarker,
@@ -44,7 +49,7 @@ export function App({
 }
 
 function MapApp({
-  initialMapLevel = 8,
+  initialMapLevel = INITIAL_MAP_LEVEL,
   initialRegionLoad = true,
   kakaoMapAppKey = getConfiguredKakaoMapAppKey(),
 }: AppProps) {
@@ -162,6 +167,17 @@ function MapApp({
     setMarkerFilters(EMPTY_COMPLEX_MARKER_FILTERS);
   }
 
+  const handleRegionRootReset = useCallback(() => {
+    handleLoadRootRegions();
+    setSelectedComplex(null);
+    focusMap(
+      INITIAL_MAP_CENTER.lat,
+      INITIAL_MAP_CENTER.lng,
+      INITIAL_MAP_LEVEL,
+      mapFocusDeltaForLevel(INITIAL_MAP_LEVEL),
+    );
+  }, [focusMap, handleLoadRootRegions]);
+
   return (
     <main
       className="app-shell"
@@ -213,7 +229,7 @@ function MapApp({
           onCloseDetail={handleCloseDetailDrawer}
           onComplexSelect={handleComplexSummarySelect}
           onLoadMoreTrades={handleLoadMoreTrades}
-          onLoadRootRegions={handleLoadRootRegions}
+          onLoadRootRegions={handleRegionRootReset}
           onRetryDetail={handleRetryDetail}
           onSearchInputChange={handleSearchInputChange}
           onSearchResultSelect={handleSearchResultSelect}

@@ -1,7 +1,4 @@
-import { useMemo, useState } from 'react';
 import {
-  Bar,
-  BarChart,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -45,7 +42,7 @@ export function ChatbotArtifacts({ actions, artifacts, onUiAction }: ChatbotArti
   }
 
   return (
-    <div className="chatbot-artifacts" aria-label="챗봇 시각 자료">
+    <div className="chatbot-artifacts" aria-label="AI 집찾기 시각 자료">
       {artifacts.map((artifact) => {
         switch (artifact.type) {
           case 'comparison_bar_chart':
@@ -87,58 +84,38 @@ function ComparisonArtifact({
   artifact: ComparisonBarChartArtifact;
   onAction: (actionId: string | null) => void;
 }) {
-  const initialMetric = artifact.metrics.some((metric) => metric.key === artifact.defaultMetric)
-    ? artifact.defaultMetric
-    : artifact.metrics[0].key;
-  const [selectedMetricKey, setSelectedMetricKey] = useState(initialMetric);
-  const selectedMetric = artifact.metrics.find((metric) => metric.key === selectedMetricKey) ?? artifact.metrics[0];
-  const data = useMemo(
-    () => artifact.items.map((item) => ({
-      name: item.name,
-      value: item.values[selectedMetric.key] ?? 0,
-      actionId: item.actionId,
-    })),
-    [artifact.items, selectedMetric.key],
-  );
-
   return (
     <section className="chatbot-artifact" data-chatbot-artifact-type={artifact.type}>
       <ArtifactHeader title={artifact.title} />
-      {artifact.metrics.length > 1 ? (
-        <div className="chatbot-metric-toggle" role="group" aria-label="비교 기준 선택">
-          {artifact.metrics.map((metric) => (
-            <button
-              type="button"
-              aria-pressed={metric.key === selectedMetric.key}
-              key={metric.key}
-              onClick={() => setSelectedMetricKey(metric.key)}
-            >
-              {compactMetricLabel(metric)}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <div className="chatbot-chart-canvas chatbot-chart-canvas-bar">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} tickMargin={6} />
-            <YAxis hide />
-            <Tooltip content={<ComparisonTooltip metric={selectedMetric} />} />
-            <Bar
-              dataKey="value"
-              fill="var(--hs-color-primary)"
-              radius={[3, 3, 0, 0]}
-              onClick={(entry: unknown) => {
-                if (isChartPayload(entry)) {
-                  onAction(entry.actionId);
-                }
-              }}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="chatbot-comparison-table-wrap">
+        <table>
+          <caption className="sr-only">단지별 비교 수치</caption>
+          <thead>
+            <tr>
+              <th scope="col">항목</th>
+              {artifact.items.map((item) => (
+                <th scope="col" key={item.name}>
+                  {item.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {artifact.metrics.map((metric) => (
+              <tr key={metric.key}>
+                <th scope="row">{compactMetricLabel(metric)}</th>
+                {artifact.items.map((item) => (
+                  <td key={item.name} data-comparison-cell="value">
+                    {formatOptionalMetricValue(item.values[metric.key], metric.unit)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      {selectedMetric.direction === 'lower_is_closer' ? (
-        <p className="chatbot-artifact-note">낮을수록 가까움</p>
+      {artifact.metrics.some((metric) => metric.direction === 'lower_is_closer') ? (
+        <p className="chatbot-artifact-note">거리 항목은 낮을수록 가까움</p>
       ) : null}
       <div className="chatbot-chart-action-list" aria-label="비교 대상 지도 보기">
         {artifact.items.map((item) => (
@@ -150,27 +127,6 @@ function ComparisonArtifact({
         ))}
       </div>
     </section>
-  );
-}
-
-function ComparisonTooltip({
-  active,
-  payload,
-  metric,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload: { name: string; value: number } }>;
-  metric: ComparisonChartMetric;
-}) {
-  if (!active || payload == null || payload.length === 0) {
-    return null;
-  }
-  const point = payload[0].payload;
-  return (
-    <div className="chatbot-chart-tooltip">
-      <span>{point.name}</span>
-      <strong>{formatMetricValue(point.value, metric.unit)}</strong>
-    </div>
   );
 }
 
@@ -329,6 +285,10 @@ function formatMetricValue(value: number, unit: string): string {
   return unit ? `${Math.round(value).toLocaleString()}${unit}` : value.toLocaleString();
 }
 
+function formatOptionalMetricValue(value: number | undefined, unit: string): string {
+  return value == null ? '-' : formatMetricValue(value, unit);
+}
+
 function formatAxisValue(value: number, unit: string): string {
   if (unit === '만원') {
     return `${(value / 10000).toFixed(1)}억`;
@@ -341,6 +301,3 @@ function formatPeriodTick(value: string): string {
   return year && month ? `${year.slice(2)}-${month}` : value;
 }
 
-function isChartPayload(value: unknown): value is { actionId: string | null } {
-  return typeof value === 'object' && value !== null && 'actionId' in value;
-}

@@ -314,7 +314,7 @@ describe('App public map surface', () => {
     const { root, rootElement } = await renderApp();
     await flushAsyncState();
 
-    const launcher = getButton(rootElement, '챗봇');
+    const launcher = getButton(rootElement, 'AI 집찾기');
     expect(launcher.className).toContain('chatbot-launcher');
 
     await act(async () => {
@@ -323,7 +323,7 @@ describe('App public map surface', () => {
 
     const shell = rootElement.querySelector('.app-shell');
     expect(shell?.getAttribute('data-chatbot-open')).toBe('true');
-    expect(rootElement.textContent).toContain('챗봇');
+    expect(rootElement.textContent).toContain('AI 집찾기');
 
     const questionInput = rootElement.querySelector<HTMLTextAreaElement>('#chatbot-question');
     expect(questionInput).not.toBeNull();
@@ -333,7 +333,7 @@ describe('App public map surface', () => {
     });
 
     await act(async () => {
-      getButton(rootElement, '전송').click();
+      getButton(rootElement, '보내기').click();
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -352,6 +352,75 @@ describe('App public map surface', () => {
     expect(rootElement.textContent).not.toContain('"handler": "search"');
 
     unmount(root);
+  });
+
+  it('submits chatbot questions with Enter and scrolls to the newest message', async () => {
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    const scrollIntoViewMock = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
+      if (url.includes('/api/v1/chatbot/query')) {
+        return Promise.resolve(jsonResponse({
+          success: true,
+          answer: 'chatbot answer',
+        }));
+      }
+
+      return Promise.resolve(jsonResponse([]));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+
+    const launcher = rootElement.querySelector<HTMLButtonElement>('.chatbot-launcher');
+    expect(launcher).not.toBeNull();
+
+    await act(async () => {
+      launcher!.click();
+    });
+
+    const questionInput = rootElement.querySelector<HTMLTextAreaElement>('#chatbot-question');
+    expect(questionInput).not.toBeNull();
+
+    await act(async () => {
+      setTextAreaValue(questionInput!, 'enter submit question');
+    });
+
+    await act(async () => {
+      questionInput!.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Enter',
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/chatbot/query'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ question: 'enter submit question' }),
+      }),
+    );
+    expect(rootElement.textContent).toContain('enter submit question');
+    expect(rootElement.textContent).toContain('chatbot answer');
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+
+    unmount(root);
+    if (originalScrollIntoView) {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: originalScrollIntoView,
+      });
+    } else {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
   });
 
   it('runs chatbot complex focus_map action and opens detail without rendering raw coordinates', async () => {
@@ -520,7 +589,7 @@ function jsonResponse(body: unknown): Response {
 
 async function submitChatbotQuestion(rootElement: HTMLElement, question: string) {
   await act(async () => {
-    getButton(rootElement, '챗봇').click();
+    getButton(rootElement, 'AI 집찾기').click();
   });
 
   const questionInput = rootElement.querySelector<HTMLTextAreaElement>('#chatbot-question');
@@ -533,7 +602,7 @@ async function submitChatbotQuestion(rootElement: HTMLElement, question: string)
   });
 
   await act(async () => {
-    getButton(rootElement, '전송').click();
+    getButton(rootElement, '보내기').click();
     await Promise.resolve();
     await Promise.resolve();
   });

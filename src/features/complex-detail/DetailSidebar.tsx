@@ -1,12 +1,4 @@
 import { useMemo, useState } from 'react';
-import {
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 
 import type { ComplexDetail } from './api/fetchComplexDetail';
 import type { ParcelComplexSummary } from './api/fetchParcelComplexes';
@@ -30,8 +22,6 @@ type DetailSidebarProps = {
   tradeRows: TradeItem[];
   selection: ComplexSelection;
 };
-
-const TREND_LINE_FALLBACK = '#153847';
 
 export function DetailSidebar({
   complexDetail,
@@ -146,7 +136,7 @@ export function DetailSidebar({
               {detailMetric('용적률', formatNumber(complexDetail.vlRat, '%'))}
             </dl>
           </section>
-          <TradeTrendChart trend={tradeTrend} />
+          <TradeTrendTable trend={tradeTrend} />
           <TradeList
             rows={tradeRows}
             totalElements={parcelTrades?.totalElements ?? 0}
@@ -228,14 +218,15 @@ function formatNumber(value: number | null, suffix: string): string | null {
 
 type TradeTrendRange = 'all' | '3y';
 
-function TradeTrendChart({ trend }: { trend: TradeTrendPoint[] }) {
+function TradeTrendTable({ trend }: { trend: TradeTrendPoint[] }) {
   const [range, setRange] = useState<TradeTrendRange>('all');
   const points = useMemo(() => filterTrendByRange(trend, range), [trend, range]);
+  const rows = useMemo(() => points.slice().reverse(), [points]);
 
   return (
-    <section className="trade-chart" aria-label="거래가 차트" data-detail-section="trade-chart">
+    <section className="trade-trend-table" aria-label="거래가 추이 표" data-detail-section="trade-trend">
       <div className="trade-section-header">
-        <h3>실거래가 흐름</h3>
+        <h3>실거래가 추이</h3>
         <div className="trade-range-toggle" role="group" aria-label="기간 선택">
           <button
             type="button"
@@ -257,54 +248,35 @@ function TradeTrendChart({ trend }: { trend: TradeTrendPoint[] }) {
       </div>
 
       {points.length === 0 ? (
-        <p className="trade-chart-empty">표시할 거래가 없습니다</p>
+        <p className="trade-trend-empty">표시할 거래가 없습니다</p>
       ) : (
-        <div className="trade-chart-canvas">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-              <XAxis
-                dataKey="month"
-                tickFormatter={formatTrendMonth}
-                tick={{ fontSize: 10 }}
-                tickMargin={6}
-                minTickGap={24}
-              />
-              <YAxis tickFormatter={formatTrendAxis} tick={{ fontSize: 10 }} width={44} />
-              <Tooltip content={<TrendTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="avgAmount"
-                stroke={trendLineColor()}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <div className="trade-trend-table-wrap">
+          <table>
+            <caption className="sr-only">월별 실거래가 평균, 최저, 최고, 거래 건수</caption>
+            <thead>
+              <tr>
+                <th scope="col">월</th>
+                <th scope="col">평균</th>
+                <th scope="col">최저</th>
+                <th scope="col">최고</th>
+                <th scope="col">건수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((point) => (
+                <tr key={point.month}>
+                  <td>{formatTrendMonth(point.month)}</td>
+                  <td data-trend-cell="amount">{formatAmount(point.avgAmount)}</td>
+                  <td data-trend-cell="amount">{formatAmount(point.minAmount)}</td>
+                  <td data-trend-cell="amount">{formatAmount(point.maxAmount)}</td>
+                  <td data-trend-cell="count">{point.count.toLocaleString()}건</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </section>
-  );
-}
-
-function TrendTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload: TradeTrendPoint }>;
-}) {
-  if (!active || payload == null || payload.length === 0) {
-    return null;
-  }
-
-  const point = payload[0].payload;
-  return (
-    <div className="trade-chart-tooltip">
-      <span className="trade-chart-tooltip-month">{formatTrendMonth(point.month)}</span>
-      <strong>{formatAmount(point.avgAmount)}</strong>
-      <span className="trade-chart-tooltip-count">{point.count.toLocaleString()}건</span>
-    </div>
   );
 }
 
@@ -322,21 +294,6 @@ function filterTrendByRange(trend: TradeTrendPoint[], range: TradeTrendRange): T
 function formatTrendMonth(month: string): string {
   const [year, monthPart] = month.split('-');
   return year && monthPart ? `${year.slice(2)}-${monthPart}` : month;
-}
-
-function formatTrendAxis(value: number): string {
-  return `${(value / 10000).toFixed(1)}억`;
-}
-
-function trendLineColor(): string {
-  if (typeof window === 'undefined') {
-    return TREND_LINE_FALLBACK;
-  }
-
-  const resolved = getComputedStyle(document.documentElement)
-    .getPropertyValue('--hs-color-primary')
-    .trim();
-  return resolved.length > 0 ? resolved : TREND_LINE_FALLBACK;
 }
 
 function TradeList({
