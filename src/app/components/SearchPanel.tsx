@@ -120,7 +120,7 @@ export function SearchForm({
       onSubmit={onSubmit}
     >
       <label>
-        <span>단지</span>
+        <span className="sr-only">단지</span>
         <input
           aria-label="단지 검색"
           name="q"

@@ -25,6 +25,11 @@ export type KakaoMapRuntimeState = 'loading' | 'ready' | 'error';
 type ComplexMapMarker = Extract<MapMarkersResult, { kind: 'complex' }>['markers'][number];
 type RegionMapMarker = Extract<MapMarkersResult, { kind: 'region' }>['markers'][number];
 
+const INITIAL_MAP_CENTER = {
+  lat: 37.498,
+  lng: 127.068,
+};
+
 type KakaoMapSurfaceProps = {
   appKey: string;
   focusTarget: MapFocusTarget | null;
@@ -36,11 +41,6 @@ type KakaoMapSurfaceProps = {
   onRuntimeErrorChange: (message: string | null) => void;
   onRuntimeStateChange: (state: KakaoMapRuntimeState) => void;
   onViewportChange: (viewport: MapViewport) => void;
-};
-
-const INITIAL_CENTER = {
-  lat: 37.5663,
-  lng: 126.978,
 };
 
 export function KakaoMapSurface({
@@ -82,7 +82,7 @@ export function KakaoMapSurface({
         }
 
         const map = new maps.Map(host, {
-          center: new maps.LatLng(INITIAL_CENTER.lat, INITIAL_CENTER.lng),
+          center: new maps.LatLng(INITIAL_MAP_CENTER.lat, INITIAL_MAP_CENTER.lng),
           level: initialLevel,
         });
         const notifyViewport = () => {

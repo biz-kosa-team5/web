@@ -8,9 +8,10 @@ import {
   fetchComplexSearchResults,
   type ComplexSearchResult,
 } from '../../features/search/api/fetchComplexSearchResults';
+import { fetchComplexDetailByComplexId } from '../../features/complex-detail/api/fetchComplexDetail';
 import { SEARCH_DEBOUNCE_MILLIS, SEARCH_FOCUS_DELTA } from '../appConstants';
 import type { ComplexSelection, PanelRequestState } from '../appTypes';
-import { hasDisplayCoordinate, stringFormValue } from '../appUtils';
+import { hasDisplayCoordinate, stringFormValue, type DisplayCoordinateCandidate } from '../appUtils';
 
 export function useComplexSearch({
   focusMap,
@@ -25,6 +26,7 @@ export function useComplexSearch({
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchRequestSeq = useRef(0);
   const suggestionRequestSeq = useRef(0);
+  const selectionFocusRequestSeq = useRef(0);
   const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -128,9 +130,7 @@ export function useComplexSearch({
       parcelId: result.parcelId,
       complexId: result.complexId,
     });
-    if (hasDisplayCoordinate(result)) {
-      focusMap(result.latitude, result.longitude, 4, SEARCH_FOCUS_DELTA);
-    }
+    focusSelectedComplex(result.complexId, result);
   }
 
   function handleSuggestionSelect(suggestion: ComplexSuggestion) {
@@ -140,6 +140,32 @@ export function useComplexSearch({
       complexId: suggestion.complexId,
     });
     setComplexSuggestions([]);
+    focusSelectedComplex(suggestion.complexId);
+  }
+
+  function focusSelectedComplex(
+    complexId: number,
+    coordinateCandidate?: DisplayCoordinateCandidate,
+  ) {
+    const requestSeq = selectionFocusRequestSeq.current + 1;
+    selectionFocusRequestSeq.current = requestSeq;
+
+    if (coordinateCandidate != null && hasDisplayCoordinate(coordinateCandidate)) {
+      focusMap(coordinateCandidate.latitude, coordinateCandidate.longitude, 4, SEARCH_FOCUS_DELTA);
+      return;
+    }
+
+    fetchComplexDetailByComplexId(complexId)
+      .then((detail) => {
+        if (requestSeq !== selectionFocusRequestSeq.current || !hasDisplayCoordinate(detail)) {
+          return;
+        }
+
+        focusMap(detail.latitude, detail.longitude, 4, SEARCH_FOCUS_DELTA);
+      })
+      .catch(() => {
+        // Detail panel still opens; only the map focus fallback is skipped.
+      });
   }
 
   return {

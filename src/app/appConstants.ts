@@ -1,10 +1,10 @@
 import type { ComplexMarkerFilters, MapBoundsRequest } from '../features/map/api/fetchMapMarkers';
 
 export const INITIAL_MARKER_BOUNDS: MapBoundsRequest = {
-  swLat: 37.45,
-  swLng: 126.85,
-  neLat: 37.7,
-  neLng: 127.2,
+  swLat: 37.428,
+  swLng: 126.958,
+  neLat: 37.568,
+  neLng: 127.178,
 };
 
 export const EMPTY_COMPLEX_MARKER_FILTERS: Required<ComplexMarkerFilters> = {

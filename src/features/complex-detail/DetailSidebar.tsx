@@ -58,8 +58,11 @@ export function DetailSidebar({
         >
           ←
         </button>
-        <div>
-          <p className="detail-drawer-kicker">{detailDrawerKicker(selection)}</p>
+        <div className="detail-drawer-title">
+          <p className="detail-drawer-kicker">
+            {complexDetail == null ? detailDrawerKicker(selection) : formatAddress(complexDetail.address)}
+          </p>
+          <h2>{complexDetail?.name ?? '단지 상세'}</h2>
           <p className="detail-drawer-state">{detailRequestLabel(detailState)}</p>
         </div>
       </div>
@@ -94,8 +97,6 @@ export function DetailSidebar({
       {detailState === 'ready' && complexDetail ? (
         <>
           <section className="detail-identity" data-detail-section="identity">
-            <h2>{complexDetail.name}</h2>
-            <p className="detail-address">{formatAddress(complexDetail.address)}</p>
             <dl className="detail-key-stats">
               {detailMetric('최근 거래', latestTradeAmountLabel(parcelTrades?.trades ?? []))}
               {detailMetric('실거래', `${(parcelTrades?.totalElements ?? 0).toLocaleString()}건`)}
@@ -126,9 +127,17 @@ export function DetailSidebar({
                 </ul>
               </section>
             ) : null}
+          </section>
+          <section className="detail-info" data-detail-section="basic-info">
+            <div className="detail-section-heading">
+              <h3>단지 기본정보</h3>
+            </div>
             <dl className="detail-metrics">
+              {detailMetric('주소', formatAddress(complexDetail.address))}
               {detailMetric('거래명', complexDetail.tradeName)}
+              {detailMetric('단지명', complexDetail.name)}
               {detailMetric('동수', formatNumber(complexDetail.dongCnt, '개동'))}
+              {detailMetric('세대수', formatNumber(complexDetail.unitCnt, '세대'))}
               {detailMetric('사용승인일', complexDetail.useDate)}
               {detailMetric('대지면적', formatNumber(complexDetail.platArea, '㎡'))}
               {detailMetric('건축면적', formatNumber(complexDetail.archArea, '㎡'))}
@@ -359,7 +368,7 @@ function TradeList({
                 <th scope="col">일자</th>
                 <th scope="col">금액</th>
                 <th scope="col">면적</th>
-                <th scope="col">층</th>
+                <th scope="col">동 / 층</th>
               </tr>
             </thead>
             <tbody>
