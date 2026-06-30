@@ -10,17 +10,20 @@ describe('ChatbotArtifacts', () => {
     document.body.innerHTML = '';
   });
 
-  it('comparison metric toggle changes selected metric', async () => {
+  it('comparison artifact renders all metric values in a table', () => {
     const { root, rootElement } = renderArtifacts([comparisonArtifact()], actions());
+    const headers = Array.from(rootElement.querySelectorAll('th')).map((header) => header.textContent);
 
-    expect(button(rootElement, '최근가').getAttribute('aria-pressed')).toBe('true');
-
-    await act(async () => {
-      button(rootElement, '세대수').click();
-    });
-
-    expect(button(rootElement, '최근가').getAttribute('aria-pressed')).toBe('false');
-    expect(button(rootElement, '세대수').getAttribute('aria-pressed')).toBe('true');
+    expect(rootElement.querySelector('.chatbot-comparison-table-wrap table')).not.toBeNull();
+    expect(headers).toEqual(expect.arrayContaining(['항목', '잠실엘스', '래미안대치팰리스', '최근가', '세대수']));
+    expect(rootElement.textContent).toContain('최근가');
+    expect(rootElement.textContent).toContain('세대수');
+    expect(rootElement.textContent).toContain('잠실엘스');
+    expect(rootElement.textContent).toContain('33.0억원');
+    expect(rootElement.textContent).toContain('5,678세대');
+    expect(rootElement.textContent).toContain('래미안대치팰리스');
+    expect(rootElement.textContent).toContain('43.5억원');
+    expect(rootElement.textContent).toContain('1,608세대');
 
     unmount(root);
   });

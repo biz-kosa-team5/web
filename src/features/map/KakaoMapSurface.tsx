@@ -26,8 +26,8 @@ type ComplexMapMarker = Extract<MapMarkersResult, { kind: 'complex' }>['markers'
 type RegionMapMarker = Extract<MapMarkersResult, { kind: 'region' }>['markers'][number];
 
 const INITIAL_MAP_CENTER = {
-  lat: 37.498,
-  lng: 127.068,
+  lat: 37.505,
+  lng: 127.06,
 };
 
 type KakaoMapSurfaceProps = {
@@ -133,8 +133,15 @@ export function KakaoMapSurface({
       return;
     }
 
-    map.setCenter?.(new maps.LatLng(focusTarget.lat, focusTarget.lng));
+    const nextCenter = new maps.LatLng(focusTarget.lat, focusTarget.lng);
+
     map.setLevel?.(focusTarget.level);
+    if (typeof map.panTo === 'function') {
+      map.panTo(nextCenter);
+      return;
+    }
+
+    map.setCenter?.(nextCenter);
   }, [focusTarget, runtimeState]);
 
   useEffect(() => {

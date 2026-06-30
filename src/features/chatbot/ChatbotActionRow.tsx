@@ -13,7 +13,7 @@ export function ChatbotActionRow({ actions, onUiAction }: ChatbotActionRowProps)
   const hasAutoRunAction = actions.some((action) => action.autoRun);
 
   return (
-    <div className="chatbot-action-row" aria-label="챗봇 지도 동작">
+    <div className="chatbot-action-row" aria-label="AI 집찾기 지도 동작">
       {hasAutoRunAction ? (
         <span className="chatbot-action-status">지도에 표시했어요</span>
       ) : null}

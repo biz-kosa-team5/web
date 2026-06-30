@@ -11,6 +11,7 @@ export type KakaoBounds = {
 export type KakaoMap = {
   getBounds: () => KakaoBounds;
   getLevel: () => number;
+  panTo?: (center: KakaoLatLng) => void;
   setCenter?: (center: KakaoLatLng) => void;
   setLevel?: (level: number) => void;
 };

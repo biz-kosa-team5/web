@@ -49,7 +49,7 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
     } catch (error) {
       setRequestState({
         status: 'error',
-        error: error instanceof Error ? error.message : '챗봇 응답을 불러오지 못했습니다.',
+        error: error instanceof Error ? error.message : 'AI 집찾기 응답을 불러오지 못했습니다.',
       });
     }
   }

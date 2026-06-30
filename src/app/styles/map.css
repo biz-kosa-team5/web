@@ -417,7 +417,7 @@
 }
 
 .marker-list-button-region {
-  border-left: 3px solid var(--hs-marker-region);
+  border-left: 3px solid var(--hs-color-primary-strong);
 }
 
 .marker-list-price {
@@ -453,10 +453,10 @@
   max-width: 168px;
   gap: 2px;
   padding: 7px 9px;
-  border: 1px solid var(--hs-marker-complex);
+  border: 1px solid transparent;
   border-radius: var(--hs-marker-radius);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--hs-shadow-marker);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.18);
   color: var(--hs-text-primary);
   cursor: pointer;
   font: inherit;
@@ -485,7 +485,7 @@
 }
 
 .fallback-map-marker-kicker {
-  color: var(--hs-action-secondary) !important;
+  color: var(--hs-color-primary-strong) !important;
   font-size: 10px !important;
   font-weight: 800 !important;
 }
@@ -496,7 +496,7 @@
   justify-items: stretch;
   gap: 0;
   padding: 0;
-  border-color: var(--hs-marker-region);
+  border-color: transparent;
   overflow: hidden;
   text-align: center;
 }
@@ -511,15 +511,16 @@
 .fallback-map-marker-region span {
   display: block;
   padding: 5px 9px;
-  background: var(--hs-marker-region);
+  background: var(--hs-color-primary-strong);
   color: var(--hs-color-surface);
   font-size: 12px;
   font-weight: 800;
 }
 
 .fallback-map-marker-complex {
-  border-color: var(--hs-marker-complex);
+  border-color: var(--hs-border-default);
   border-left-width: 4px;
+  border-left-color: var(--hs-color-primary-strong);
 }
 
 .kakao-map-overlay {
@@ -529,16 +530,16 @@
   gap: 2px;
   justify-items: start;
   padding: 6px 8px 7px;
-  border: 1px solid var(--hs-marker-complex);
+  border: 1px solid transparent;
   border-radius: var(--hs-marker-radius);
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.97);
   color: var(--hs-text-primary);
   font-size: 11px;
   line-height: 1.2;
   white-space: normal;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    var(--hs-shadow-marker);
+    0 3px 10px rgba(2, 132, 199, 0.18);
   cursor: default;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
@@ -550,12 +551,13 @@
 }
 
 .kakao-map-overlay-complex:hover {
-  background: var(--hs-color-complex-soft);
+  border-color: var(--hs-color-primary);
+  background: var(--hs-color-primary-soft);
   transform: translateY(-1px);
 }
 
 .kakao-map-overlay-kicker {
-  color: var(--hs-action-secondary);
+  color: var(--hs-color-primary-strong);
   font-size: 10px;
   font-weight: 800;
 }
@@ -574,7 +576,7 @@
 }
 
 .kakao-map-overlay-region {
-  border-color: var(--hs-marker-region);
+  border-color: transparent;
   min-width: 112px;
   justify-items: stretch;
   gap: 0;
@@ -589,7 +591,8 @@
 }
 
 .kakao-map-overlay-region:hover {
-  background: var(--hs-color-region-soft);
+  background: var(--hs-surface-control);
+  border-color: var(--hs-color-primary);
   transform: translateY(-1px);
 }
 
@@ -607,13 +610,14 @@
 .kakao-map-overlay-region-action {
   display: block;
   padding: 5px 9px;
-  background: var(--hs-marker-region);
+  background: var(--hs-color-primary-strong);
   color: var(--hs-color-surface);
   font-size: 11px;
 }
 
 .kakao-map-overlay-complex {
-  border-color: var(--hs-marker-complex);
+  border-color: transparent;
   border-left-width: 4px;
+  border-left-color: var(--hs-color-primary-strong);
   cursor: pointer;
 }

@@ -1,5 +1,12 @@
 import type { ComplexMarkerFilters, MapBoundsRequest } from '../features/map/api/fetchMapMarkers';
 
+export const INITIAL_MAP_CENTER = {
+  lat: 37.505,
+  lng: 127.06,
+};
+
+export const INITIAL_MAP_LEVEL = 7;
+
 export const INITIAL_MARKER_BOUNDS: MapBoundsRequest = {
   swLat: 37.428,
   swLng: 126.958,
