@@ -283,7 +283,7 @@
   text-align: left;
 }
 
-.trade-trend-table {
+.trade-chart {
   display: grid;
   gap: 10px;
   margin: 0;
@@ -313,10 +313,19 @@
   font-size: 12px;
 }
 
-.trade-trend-empty {
+.trade-chart-empty {
   margin: 0;
   color: var(--hs-text-secondary);
   font-size: 13px;
+}
+
+.trade-chart-canvas {
+  width: 100%;
+  height: 180px;
+  padding: 8px 4px 2px;
+  border: 1px solid var(--hs-border-default);
+  border-radius: 12px;
+  background: var(--hs-surface-control-muted);
 }
 
 .trade-range-toggle {
@@ -347,49 +356,26 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
-.trade-trend-table-wrap {
-  overflow-x: auto;
+.trade-chart-tooltip {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
   border: 1px solid var(--hs-border-default);
   border-radius: 8px;
-  background: var(--hs-surface-control);
-}
-
-.trade-trend-table table {
-  width: 100%;
-  min-width: 420px;
-  border-collapse: collapse;
-  table-layout: fixed;
+  background: var(--hs-color-layer-strong);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   font-size: 12px;
 }
 
-.trade-trend-table th,
-.trade-trend-table td {
-  padding: 8px 7px;
-  border-bottom: 1px solid var(--hs-border-default);
-  text-align: right;
-  vertical-align: middle;
-}
-
-.trade-trend-table th {
-  color: var(--hs-text-secondary);
-  font-size: 11px;
+.trade-chart-tooltip strong {
+  font-size: 13px;
   font-weight: 800;
-}
-
-.trade-trend-table th:first-child,
-.trade-trend-table td:first-child {
-  text-align: left;
-  white-space: nowrap;
-}
-
-.trade-trend-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.trade-trend-table td[data-trend-cell='amount'],
-.trade-trend-table td[data-trend-cell='count'] {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+}
+
+.trade-chart-tooltip-month,
+.trade-chart-tooltip-count {
+  color: var(--hs-text-secondary);
 }
 
 .trade-list {
