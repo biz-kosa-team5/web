@@ -1,12 +1,17 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
 
 describe('App public map surface', () => {
+  beforeEach(() => {
+    installLocalStorageMock();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    window.localStorage.clear();
     window.history.pushState({}, '', '/');
     document.body.innerHTML = '';
   });
@@ -324,6 +329,7 @@ describe('App public map surface', () => {
     const shell = rootElement.querySelector('.app-shell');
     expect(shell?.getAttribute('data-chatbot-open')).toBe('true');
     expect(rootElement.textContent).toContain('AI 집찾기');
+    expect(rootElement.textContent).toContain('단지 실거래, 동/구 단위 최신 거래, 추천, 비교, 시세 흐름, 계약 법령을 이어서 물어볼 수 있어요.');
 
     const questionInput = rootElement.querySelector<HTMLTextAreaElement>('#chatbot-question');
     expect(questionInput).not.toBeNull();
@@ -350,6 +356,134 @@ describe('App public map surface', () => {
     expect(rootElement.textContent).not.toContain('JSON 응답 보기');
     expect(rootElement.textContent).toContain('서울 아파트 추천 결과입니다.');
     expect(rootElement.textContent).not.toContain('"handler": "search"');
+
+    unmount(root);
+  });
+
+  it('stores chatbot memory patch and includes it in the next question', async () => {
+    let chatbotCallCount = 0;
+    const patchUpdatedAt = new Date().toISOString();
+    const patchExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
+      if (url.includes('/api/v1/chatbot/query')) {
+        chatbotCallCount += 1;
+        return Promise.resolve(jsonResponse(
+          chatbotCallCount === 1
+            ? {
+                success: true,
+                answer: '대치동 최신 실거래입니다.',
+                conversationMemoryPatch: {
+                  version: 'v1',
+                  activeRegion: {
+                    name: '대치동',
+                    code: '11680106',
+                    type: 'neighborhood',
+                  },
+                  items: [
+                    {
+                      index: 1,
+                      kind: 'complex',
+                      complexId: 3810,
+                      complexName: '풍림아이원2차202동',
+                      address: '대치동 910-6',
+                      tradeId: 7781885,
+                      dealDate: '2026-06-23',
+                      dealAmount: 255000,
+                    },
+                    {
+                      index: 2,
+                      kind: 'complex',
+                      complexId: 1001,
+                      complexName: '래미안대치팰리스',
+                      address: '대치동 1027',
+                      tradeId: 7781906,
+                      dealDate: '2026-06-16',
+                      dealAmount: 445000,
+                    },
+                  ],
+                  lastHandler: 'simple_lookup',
+                  lastQueryType: 'region_trade_history',
+                  updatedAt: patchUpdatedAt,
+                  expiresAt: patchExpiresAt,
+                },
+              }
+            : {
+                success: true,
+                answer: '래미안대치팰리스 흐름입니다.',
+              },
+        ));
+      }
+
+      return Promise.resolve(jsonResponse([]));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+    await submitChatbotQuestion(rootElement, '대치동 최신 실거래가 3개 뽑아줘');
+    await flushAsyncState();
+
+    const storedMemory = JSON.parse(
+      window.localStorage.getItem('home-search.chatbot.memory.v1') ?? 'null',
+    );
+    expect(storedMemory).toMatchObject({
+      version: 'v1',
+      activeRegion: {
+        name: '대치동',
+        code: '11680106',
+        type: 'neighborhood',
+      },
+      items: [
+        expect.objectContaining({
+          index: 1,
+          complexId: 3810,
+          complexName: '풍림아이원2차202동',
+        }),
+        expect.objectContaining({
+          index: 2,
+          complexId: 1001,
+          complexName: '래미안대치팰리스',
+        }),
+      ],
+    });
+    expect(JSON.stringify(storedMemory)).not.toContain('대치동 최신 실거래입니다.');
+
+    const questionInput = rootElement.querySelector<HTMLTextAreaElement>('#chatbot-question');
+    expect(questionInput).not.toBeNull();
+
+    await act(async () => {
+      setTextAreaValue(questionInput!, '두 번째 거 최근 1년 흐름도 알려줘');
+    });
+
+    await act(async () => {
+      getButton(rootElement, '보내기').click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    const chatbotCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/v1/chatbot/query'));
+    expect(chatbotCalls).toHaveLength(2);
+    expect(JSON.parse(String((chatbotCalls[0][1] as RequestInit).body))).toEqual({
+      question: '대치동 최신 실거래가 3개 뽑아줘',
+    });
+    expect(JSON.parse(String((chatbotCalls[1][1] as RequestInit).body))).toMatchObject({
+      question: '두 번째 거 최근 1년 흐름도 알려줘',
+      conversationContext: {
+        version: 'v1',
+        activeRegion: {
+          name: '대치동',
+        },
+        items: [
+          expect.objectContaining({
+            complexId: 3810,
+          }),
+          expect.objectContaining({
+            complexId: 1001,
+          }),
+        ],
+      },
+    });
 
     unmount(root);
   });
@@ -576,6 +710,31 @@ async function flushAsyncState() {
 function unmount(root: Root) {
   act(() => {
     root.unmount();
+  });
+}
+
+function installLocalStorageMock() {
+  const store = new Map<string, string>();
+  const storage: Storage = {
+    get length() {
+      return store.size;
+    },
+    clear: () => {
+      store.clear();
+    },
+    getItem: (key: string) => store.get(key) ?? null,
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
+
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: storage,
   });
 }
 

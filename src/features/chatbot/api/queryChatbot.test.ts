@@ -32,6 +32,42 @@ describe('queryChatbot API 어댑터', () => {
     );
   });
 
+  it('conversation context가 있으면 request body에 포함한다', async () => {
+    const payload = { success: true, answer: 'ok' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(payload));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await queryChatbot('두 번째 거 최근 1년 흐름도 알려줘', {
+      version: 'v1',
+      activeComplex: {
+        complexId: 1001,
+        complexName: '래미안대치팰리스',
+      },
+      items: [],
+      updatedAt: '2026-06-30T00:00:00.000Z',
+      expiresAt: '2026-07-07T00:00:00.000Z',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      resolveApiUrl('/api/v1/chatbot/query'),
+      expect.objectContaining({
+        body: JSON.stringify({
+          question: '두 번째 거 최근 1년 흐름도 알려줘',
+          conversationContext: {
+            version: 'v1',
+            activeComplex: {
+              complexId: 1001,
+              complexName: '래미안대치팰리스',
+            },
+            items: [],
+            updatedAt: '2026-06-30T00:00:00.000Z',
+            expiresAt: '2026-07-07T00:00:00.000Z',
+          },
+        }),
+      }),
+    );
+  });
+
   it('success false payload도 answer가 있으면 그대로 반환한다', async () => {
     const payload = { success: false, answer: '질문을 처리하지 못했습니다.', error: 'handler failed' };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(payload)));
@@ -42,6 +78,66 @@ describe('queryChatbot API 어댑터', () => {
       uiArtifacts: [],
       uiSummary: null,
     });
+  });
+
+  it('conversation memory patch를 정규화한다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      success: true,
+      answer: 'ok',
+      conversationMemoryPatch: {
+        version: 'v1',
+        activeRegion: {
+          name: '대치동',
+          code: '11680106',
+          type: 'neighborhood',
+        },
+        items: [
+          {
+            index: 1,
+            kind: 'complex',
+            complexId: '1001',
+            complexName: '래미안대치팰리스',
+          },
+        ],
+        lastHandler: 'simple_lookup',
+        lastQueryType: 'region_trade_history',
+      },
+    })));
+
+    const result = await queryChatbot('대치동 최신 실거래');
+
+    expect(result.conversationMemoryPatch).toMatchObject({
+      version: 'v1',
+      activeRegion: {
+        name: '대치동',
+        code: '11680106',
+        type: 'neighborhood',
+      },
+      items: [
+        expect.objectContaining({
+          index: 1,
+          complexId: 1001,
+          complexName: '래미안대치팰리스',
+        }),
+      ],
+      lastHandler: 'simple_lookup',
+      lastQueryType: 'region_trade_history',
+    });
+  });
+
+  it('malformed conversation memory patch는 null로 버린다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      success: true,
+      answer: 'ok',
+      conversationMemoryPatch: {
+        version: 'v2',
+        items: [],
+      },
+    })));
+
+    const result = await queryChatbot('질문');
+
+    expect(result.conversationMemoryPatch).toBeNull();
   });
 
   it('valid focus_map action을 보존한다', async () => {

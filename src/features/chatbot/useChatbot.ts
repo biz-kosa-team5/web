@@ -1,18 +1,42 @@
 import { useRef, useState } from 'react';
 
 import { queryChatbot } from './api/queryChatbot';
-import type { ChatbotMessage, ChatbotRequestState, ChatbotUiAction } from './chatbotTypes';
+import {
+  loadChatbotConversationMemory,
+  mergeChatbotConversationMemory,
+  saveChatbotConversationMemory,
+  toChatbotConversationContext,
+} from './chatbotMemory';
+import type {
+  ChatbotConversationMemory,
+  ChatbotMessage,
+  ChatbotRequestState,
+  ChatbotResponse,
+  ChatbotUiAction,
+} from './chatbotTypes';
 
 const IDLE_REQUEST_STATE: ChatbotRequestState = {
   status: 'idle',
   error: null,
 };
 
+const CHATBOT_INTRO_ANSWER = '단지 실거래, 동/구 단위 최신 거래, 추천, 비교, 시세 흐름, 계약 법령을 이어서 물어볼 수 있어요.';
+
+const INTRO_RESPONSE: ChatbotResponse = {
+  answer: CHATBOT_INTRO_ANSWER,
+  uiActions: [],
+  uiArtifacts: [],
+  uiSummary: null,
+};
+
 export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => void } = {}) {
   const messageSequenceRef = useRef(0);
   const executedActionIdsRef = useRef(new Set<string>());
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<ChatbotMessage[]>([]);
+  const [messages, setMessages] = useState<ChatbotMessage[]>(() => [introMessage()]);
+  const [conversationMemory, setConversationMemory] = useState<ChatbotConversationMemory | null>(
+    () => loadChatbotConversationMemory(),
+  );
   const [requestState, setRequestState] = useState<ChatbotRequestState>(IDLE_REQUEST_STATE);
 
   async function submitQuestion() {
@@ -33,7 +57,10 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
     ]);
 
     try {
-      const response = await queryChatbot(question);
+      const response = await queryChatbot(
+        question,
+        toChatbotConversationContext(conversationMemory),
+      );
       const assistantMessageId = nextMessageId();
       setMessages((current) => [
         ...current,
@@ -44,6 +71,12 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
           response,
         },
       ]);
+      const nextMemory = mergeChatbotConversationMemory(
+        conversationMemory,
+        response.conversationMemoryPatch,
+      );
+      setConversationMemory(nextMemory);
+      saveChatbotConversationMemory(nextMemory);
       runAutoUiAction(assistantMessageId, response.uiActions);
       setRequestState(IDLE_REQUEST_STATE);
     } catch (error) {
@@ -80,4 +113,13 @@ export function useChatbot(options: { onUiAction?: (action: ChatbotUiAction) => 
     executedActionIdsRef.current.add(executionKey);
     options.onUiAction?.(action);
   }
+}
+
+function introMessage(): ChatbotMessage {
+  return {
+    id: 'chatbot-intro-message',
+    role: 'assistant',
+    content: CHATBOT_INTRO_ANSWER,
+    response: INTRO_RESPONSE,
+  };
 }
