@@ -47,6 +47,9 @@ export function DetailSidebar({
   tradeRows,
   selection,
 }: DetailSidebarProps) {
+  const detailStateLabel = detailState === 'ready' ? null : detailRequestLabel(detailState);
+  const detailSummaryLabel = detailState === 'ready' ? '조회됨' : detailRequestLabel(detailState);
+
   return (
     <section aria-label="단지 상세 패널" className="detail-sidebar" data-ui-layer="detail-sidebar">
       <div className="detail-drawer-header">
@@ -63,7 +66,7 @@ export function DetailSidebar({
             {complexDetail == null ? detailDrawerKicker(selection) : formatAddress(complexDetail.address)}
           </p>
           <h2>{complexDetail?.name ?? '단지 상세'}</h2>
-          <p className="detail-drawer-state">{detailRequestLabel(detailState)}</p>
+          {detailStateLabel ? <p className="detail-drawer-state">{detailStateLabel}</p> : null}
         </div>
       </div>
 
@@ -71,7 +74,7 @@ export function DetailSidebar({
         ariaLabel="상세 API 데이터 요약"
         flow="detail"
         items={[
-          ['상세', detailRequestLabel(detailState)],
+          ['상세', detailSummaryLabel],
           ['실거래', parcelTrades == null ? '대기' : `${parcelTrades.totalElements.toLocaleString()}건`],
           ['같은 필지', detailState === 'ready' ? `${parcelComplexes.length.toLocaleString()}개` : '대기'],
         ]}

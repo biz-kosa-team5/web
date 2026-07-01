@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CHATBOT_HISTORY_STORAGE_KEY } from '../features/chatbot/chatbotHistory';
 import { App } from './App';
+import { SEARCH_DEBOUNCE_MILLIS } from './appConstants';
 
 describe('App public map surface', () => {
   beforeEach(() => {
@@ -298,6 +299,72 @@ describe('App public map surface', () => {
     expect(markerBody.neLat).toBeCloseTo(37.5224);
     expect(markerBody.swLng).toBeCloseTo(127.0721);
     expect(markerBody.neLng).toBeCloseTo(127.0921);
+
+    expect(
+      rootElement
+        .querySelector('.detail-drawer-title')
+        ?.textContent,
+    ).not.toContain('완료');
+
+    unmount(root);
+  });
+
+  it('shows search results without duplicate suggestions when both APIs return the same complex', async () => {
+    const matchingComplex = {
+      complexId: 3379,
+      complexName: '은마',
+      parcelId: 9103379,
+      address: '대치동 316',
+    };
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/api/v1/search/complexes/suggestions')) {
+        return Promise.resolve(jsonResponse([matchingComplex]));
+      }
+      if (url.includes('/api/v1/search/complexes?')) {
+        return Promise.resolve(jsonResponse([
+          {
+            ...matchingComplex,
+            latitude: 37.4975,
+            longitude: 127.065,
+          },
+        ]));
+      }
+
+      return Promise.resolve(jsonResponse(apiPayloadForUrl(url)));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { root, rootElement } = await renderApp();
+    await flushAsyncState();
+
+    const searchInput = rootElement.querySelector<HTMLInputElement>('input[aria-label="단지 검색"]');
+    expect(searchInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(searchInput!, '은마');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flushAsyncState();
+
+    expect(queryButtonsByAriaLabel(rootElement, '검색 제안 선택 은마')).toHaveLength(1);
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, SEARCH_DEBOUNCE_MILLIS + 20);
+      });
+    });
+    await flushAsyncState();
+
+    expect(queryButtonsByAriaLabel(rootElement, '검색 결과 선택 은마')).toHaveLength(1);
+    expect(queryButtonsByAriaLabel(rootElement, '검색 제안 선택 은마')).toHaveLength(0);
+    expect(searchPanelCount(rootElement, '제안')).toBe(0);
+    expect(searchPanelCount(rootElement, '결과')).toBe(1);
+    expect(
+      rootElement
+        .querySelector('#exploration-panel-search .panel-section-header')
+        ?.textContent,
+    ).not.toContain('완료');
 
     unmount(root);
   });
@@ -1424,6 +1491,29 @@ function getButtonByAriaLabel(rootElement: HTMLElement, label: string): HTMLButt
   }
 
   return button;
+}
+
+function queryButtonsByAriaLabel(rootElement: HTMLElement, label: string): HTMLButtonElement[] {
+  return Array.from(rootElement.querySelectorAll('button')).filter(
+    (candidate): candidate is HTMLButtonElement =>
+      candidate instanceof HTMLButtonElement && candidate.getAttribute('aria-label') === label,
+  );
+}
+
+function searchPanelCount(rootElement: HTMLElement, label: string): number {
+  const searchPanel = rootElement.querySelector('#exploration-panel-search');
+  if (searchPanel == null) {
+    throw new Error('Search panel not found');
+  }
+
+  const countItem = Array.from(searchPanel.querySelectorAll('.data-count-strip div')).find(
+    (candidate) => candidate.querySelector('dt')?.textContent === label,
+  );
+  if (countItem == null) {
+    throw new Error(`Search panel count not found: ${label}`);
+  }
+
+  return Number(countItem.querySelector('dd')?.textContent?.replaceAll(',', ''));
 }
 
 function lastJsonBodyFor(fetchMock: ReturnType<typeof vi.fn>, path: string) {
